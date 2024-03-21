@@ -32,6 +32,7 @@ class dataset:
                     ), 
                     columns = ("Level","Title")
                 )        
+            
             # Data Quality process
             dfPreprocessing = self.preprocessing(dfGetStructure)
 
@@ -54,8 +55,9 @@ class dataset:
         # Create dataframe temp and update
         Dataset= self.split_row_data(df)
         dfTmp = pd.DataFrame(data=Dataset,columns=['Level', 'title','block','title_block'])
-        #print(type(dfTmp))
-        return self.update(dfTmp)
+        dfUpdate = self.update(dfTmp)
+        dfOutput = self.processing_block_sn(dfUpdate)
+        return dfOutput
 
     def split_row_data(self,df:pd.DataFrame) -> list:
 
@@ -63,13 +65,13 @@ class dataset:
         # Get id Start Level
         nLevel = df["Level"].astype("Int64").min()
         titleHeaderAux = ""        
+        titleHeader = ""
         for index, row in df.iterrows():
             idLevel = row["Level"]
             titleLevel = row["Title"]
 
             block = ""
-            title = ""
-            titleHeader = ""
+            title = ""            
             title_ = ""
 
             if titleLevel.isspace() == False:
@@ -78,14 +80,14 @@ class dataset:
                     idBlock = title_dataquality.split()[0]
                     if idBlock in BLOCKS_ID:
                         block = idBlock
-                        title = title_dataquality.split()[1]                        
+                        title = " ".join(title_dataquality.split(block)).lstrip()                  
                 except:
                     block = ""
                             
                 if len(title) == 0:
                     title = title_dataquality
                 
-                if idLevel == nLevel:
+                if idLevel == 1:
                     titleHeader = title
                     titleHeaderAux = titleHeader
                 else:
@@ -137,8 +139,8 @@ class dataset:
                     dfTemp.at[index,"block"] = blockAux 
         
         # Process when Block is SN 
-        dfOutput = self.processing_block_sn(dfTemp)
-        return dfOutput
+        #dfOutput = self.processing_block_sn(dfTemp)        
+        return dfTemp
 
     def processing_block_sn(self,df:pd.DataFrame):
         
@@ -152,10 +154,6 @@ class dataset:
                 #Filter SN in Dataframe 
                 dfFilterSN = dfFilter[dfFilter["block"].isin(["SN"])]
                 if len(dfFilterSN) > 1:
-
-                    if dfFilterSN["title"].unique == "accès sans barrières":
-                        print("Is funny .......")
-
                     str_note = " ".join(str(x) for x in dfFilterSN["title_block"].to_list())
 
                     # Find row with SN block Status
@@ -168,6 +166,8 @@ class dataset:
                     tmp = dfFilter.drop(nexIdx)
 
                     data.append(tmp)
+                else: 
+                    data.append(dfFilter)
             else:
                 data.append(dfFilter)
         

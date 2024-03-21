@@ -17,29 +17,17 @@ class convert_graph:
         self.owl = Namespace("http://www.w3.org/2002/07/owl#")
 
     def generate_skos_concept(self, df:pd.DataFrame, nameGraph : str) -> Graph:
-
+        # Create a Graph
+        gConcepts = Graph()
         # Get all title header
         titles = df["title"].to_list()
         titlesKey = pd.Series(list(dict.fromkeys(titles)))
-        # Remove THÉSAURUS  concept
-        #if "THÉSAURUS" in titlesKey:
-        #    titlesKey.pop("THÉSAURUS")
-
-        # Create a Graph
-        gConcepts = Graph()
-        #Navigating
-        print(len(titlesKey))
-        nCount = 0
-
+        
         for Title in titlesKey:
-            nCount += 1
-            print("text"+str(nCount))
             # get block for each title
             dfFilter = df[df["title"].isin([Title])]
             # find if block contain USE
-            block  = dfFilter["block"].to_list()
-            
-            #bExist = 'USE' in block
+            block  = dfFilter["block"].to_list()            
             # If bExist is false then generate a skos:Concept
             if 'USE' not in block:
                 # Convert title to URI            
@@ -63,9 +51,14 @@ class convert_graph:
                     
                         # Generate skos:broader and skos:narrower
                         if block == "BT":
-                            gConcepts.add((title_uri,self.skos.broader,URIRef(self.jurivoc + self.qa_text(title_block))))
-                            # Inverse to skos:broader
-                            gConcepts.add((URIRef(self.jurivoc + self.dq_text(title_block)),self.skos.narrower,title_uri))
+                            if "THÉSAURUS" in title_block:
+                                gConcepts.add((title_uri,self.skos.topConceptOf,URIRef(self.jurivoc + self.qa_text("THÉSAURUS"))))
+                                gConcepts.add((URIRef(self.jurivoc + self.qa_text("THÉSAURUS")),self.skos.hasTopConcept,title_uri))
+
+                            else:
+                                gConcepts.add((title_uri,self.skos.broader,URIRef(self.jurivoc + self.qa_text(title_block))))
+                                # Inverse to skos:broader
+                                gConcepts.add((URIRef(self.jurivoc + self.dq_text(title_block)),self.skos.narrower,title_uri))
 
                         # Generate skos:scopeNote
                         if block == "SN":
@@ -77,24 +70,26 @@ class convert_graph:
         self.jurivocGraph += gConcepts
         return True
     
-    def generate_skos_concept_scheme(self,df:pd.DataFrame, nameGraph : str) -> Graph:
+    def generate_Thesaurus(self,df:pd.DataFrame, nameGraph : str) -> Graph:
 
         # get block for each title
-        dfFilter = df[df["title"].isin(["THÉSAURUS"])]
         gConceptScheme = Graph()
+        dfFilter = df[df["title"].isin(["THÉSAURUS"])]
         if len(dfFilter) > 0:
-            # Convert title to URI            
-            title_uri = self.qa_text(dfFilter.title.astype("str").unique)
+            # Convert title to URI        
+            title_uri = URIRef(self.jurivoc + "THESAURUS")
             # Create skos:Concept Graph
-            gConceptScheme.add((URIRef(self.jurivoc + title_uri),self.rdf.type,self.skos.ConceptScheme))
+            gConceptScheme.add((title_uri,self.rdf.type,self.skos.ConceptScheme))
 
-            for index,row in df.iterrows():
+            for index,row in dfFilter.iterrows():
                 block = row["block"]
                 title_block = row["title_block"]
 
                 # Generate skos:scopeNote
                 if block == "SN":
-                    gConceptScheme.add((URIRef(self.jurivoc + title_uri),self.owl.versionInfo,Literal(title_block, lang="fr") ))
+                    gConceptScheme.add((title_uri,self.owl.versionInfo,Literal(title_block, lang="fr") ))        
+        self.jurivocGraph += gConceptScheme
+        return True    
 
     def generate_language_graph(self, df:pd.DataFrame) -> Graph:
 
@@ -107,8 +102,9 @@ class convert_graph:
             idLang = row["language"]
             title_language = row["title_traduction"]
 
-            self.jurivocGraph += gLanguage.add((title_uri,self.skos.prefLabel,Literal(title_language, lang=idLang)))
+            gLanguage.add((title_uri,self.skos.prefLabel,Literal(title_language, lang=idLang)))
 
+        self.jurivocGraph += gLanguage
         return True
 
     def generate_graph_ger_ita(self,df:pd.DataFrame, nameFile) -> Graph:
@@ -124,6 +120,8 @@ class convert_graph:
         # Get all title header
         titles = df["title"].to_list()
         titlesKey = pd.Series(list(dict.fromkeys(titles)))
+        if "THÉSAURUS" in titlesKey:
+            titles.pop("THÉSAURUS")
         for Title in titlesKey:
             # get block for each title
             dfFilter = df[df["title"].isin([Title])]
@@ -144,9 +142,10 @@ class convert_graph:
                             title_uri = URIRef(self.jurivoc + title)
                             idLang = traduction["language"].squeeze()
                             #print("Language: {}".format(idLang))
-                            self.jurivocGraph += gLanguage.add((title_uri,self.skos.prefLabel,Literal(titleBlock, lang=idLang)))
+                            gLanguage.add((title_uri,self.skos.prefLabel,Literal(titleBlock, lang=idLang)))
                         except:
                             print("Not found the taduction {}".format(titleCurrent))                        
+        self.jurivocGraph += gLanguage
         return True
         
     def dq_text(self, title:str):
@@ -199,14 +198,12 @@ class convert_graph:
             else:                
                 if '_fre.txt' in nameFile:
                     print("Generate - Graph of data: {} # rows {}".format(nameFile, len(df)))
-                    # =================== Graph skos:ConceptScheme
-                    dfThesaurus = df[df["title"] == "THÉSAURUS"]
-                    print("Graph THÉSAURUS, # rows {}".format(dfThesaurus))
-                    self.generate_skos_concept_scheme(dfThesaurus,nameFile) 
+                    # =================== Graph THÉSAURUS
+                    print("Graph THÉSAURUS")
+                    self.generate_Thesaurus(df,nameFile) 
                     # =================== Graph Skos:Concept
-                    dfConcepts = df[df["title"] != "THÉSAURUS"]
-                    print("Graph concepts, # rows {}".format(dfConcepts))
-                    self.generate_skos_concept(dfConcepts,nameFile)                    
+                    print("Graph concepts")
+                    self.generate_skos_concept(df,nameFile)                    
                 
                 if '_ger.txt' in nameFile:
                     print("Generate - Graph of data: {}".format(nameFile))
@@ -216,4 +213,5 @@ class convert_graph:
                     print("Generate - Graph of data: {}".format(nameFile))
                     self.generate_graph_ger_ita(df,nameFile)    
         print("Create graph file ")
-        return self.jurivocGraph.serialize(format="trig", destination= "test.trig")
+        outputFile = self.output+".trig"
+        return self.jurivocGraph.serialize(format="trig", destination= outputFile)

@@ -26,9 +26,9 @@ if __name__ == '__main__':
     
     # Generate result foe each file input
     #print("Step 1.1 Generate output for each input file")
-    #for l in ds:
-    #    df = l[1]
-    #    df.to_csv(l[0]+'.csv',sep="|",index=False)
+    for l in ds:
+        df = l[1]
+        df.to_csv(l[0]+'.csv',sep="|",index=False)
 
     # #########################################################
     #
