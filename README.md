@@ -47,12 +47,12 @@ pip install -r requirements.txt
 # Running the Python script
 
 ```python
-  python convert_data_jurivoc.py `directory input files` `directory output`
+  python convert_data_jurivoc.py <directory input files> <directory output>
 ```
 
 E.g:
 ```python
-python convert_data_jurivoc.py `./inputs/` `./jurivoc_result`
+python convert_data_jurivoc.py ./inputs/ ./jurivoc_result
 ```
 
 
