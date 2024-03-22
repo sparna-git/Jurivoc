@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 from rdflib import Graph, URIRef, Namespace, Literal
 
@@ -135,8 +136,7 @@ class convert_graph:
                         # find in the dictionary the title value
                         try:
                             traduction = dftranslate[dftranslate["title_traduction"] == titleCurrent]
-                            print("Result {} Title FR {} Title {} Language {}".format(type(traduction),traduction["title"].squeeze(),titleCurrent,traduction["language"].squeeze()))
-
+                            
                             title = self.dq_text(str(traduction["title"].squeeze()))
                             title_uri = URIRef(self.jurivoc + title)
                             idLang = traduction["language"].squeeze()
@@ -184,7 +184,8 @@ class convert_graph:
 
     def graph_process(self):
 
-        #self.jurivocGraph.parse(self.jurivoc+'/dataset')
+        if not os.path.exists(self.output):
+            os.mkdir(self.output)
         # read dataset
         for source in self.dataset:
             # Get source
@@ -207,6 +208,7 @@ class convert_graph:
                 if ('_ger.txt' in nameFile) or ('_ita.txt' in nameFile):
                     print("Generate - Graph of data: {}".format(nameFile))
                     self.generate_graph_ger_ita(df,nameFile)
-        print("Create graph file ")
-        outputFile = self.output+".trig"
+        
+        outputFile = file = os.path.join(self.output,'result.trig')
+        print("Created graph file {}".format(outputFile))
         return self.jurivocGraph.serialize(format="trig", destination= outputFile)
