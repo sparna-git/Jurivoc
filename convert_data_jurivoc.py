@@ -34,7 +34,7 @@ if __name__ == '__main__':
     # Get Dataset list
     ds = readFiles.read_file()
     
-    # Generate result foe each file input
+    # Generate result for each file input
     if args.files:
 		# create folder if it does not exist
         print("Step 1.1 Generate output file for each input")

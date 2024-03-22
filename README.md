@@ -5,6 +5,7 @@
 
 * Python 3.12
 
+
 ## Installation
 
 1. Clone the repository
@@ -48,7 +49,7 @@ Linux : source virtualenv/bin/activate
 pip install -r requirements.txt
 ```
 
-# Running the Python script
+## Running the Python script
 
 /!\ Make sure you are in the virtualenv !
 
@@ -61,11 +62,25 @@ The command synopsis is the following:
 e.g:
 
 ```python
-python convert_data_jurivoc.py --data inputs --output jurivoc_graph --log jurivoc_output
+python convert_data_jurivoc.py --data inputs --output jurivoc_graph --log jurivoc_log
 ```
 
 The parameters are the following:
 
-- `--data` Directory containing Jurivoc files. (required)
+- `--data` Directory containing the Jurivoc files. (required) :
+  - jurivoc_fre.txt
+  - jurivoc_ger.txt
+  - jurivoc_ita.txt
+  - jurivoc_fre_ger.txt
+  - jurivoc_fre_ita.txt
 - `--output` Result Directory (required)
-- `--log` Log Directory (optional)
+- `--log` Log Directory where the raw dataframes resulting from file parsing will be logged (optional)
+
+
+## Notes
+
+The conversion takes about 15 minutes to complete.
+
+The conversion assumes that the input files are named like the one documented above, to know the language of the labels. Do not rename the files.
+
+The structure of the thesaurus is read from the French variant. The german and italian variants are used to fetch the corresponding labels (pref and alt) and notes, but not the broader/narrower/related.
