@@ -46,13 +46,19 @@ pip install -r requirements.txt
 
 # Running the Python script
 
+```sh
+
+--data Directory containing multiple files. (required)
+--output Result Directory (required)
+--log Log Directory (Optional)
+
+```
+
 ```python
-  python convert_data_jurivoc.py <directory input files> <directory output>
+  python convert_data_jurivoc.py --data <directory input files > --output <directory output> --log <directory log>
 ```
 
 E.g:
 ```python
-python convert_data_jurivoc.py ./inputs/ ./jurivoc_result
+python convert_data_jurivoc.py --data inputs --output jurivoc_graph --log jurivoc_output
 ```
-
-
