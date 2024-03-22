@@ -22,50 +22,50 @@ class convert_graph:
         # Get all title header
         titles = df["title"].to_list()
         titlesKey = pd.Series(list(dict.fromkeys(titles)))
-        
         for Title in titlesKey:
-            # get block for each title
-            dfFilter = df[df["title"].isin([Title])]
-            # find if block contain USE
-            block  = dfFilter["block"].to_list()            
-            # If bExist is false then generate a skos:Concept
-            if 'USE' not in block:
-                # Convert title to URI            
-                title_dq = self.dq_text(Title)
-                title_uri = URIRef(self.jurivoc + title_dq)
-                
-                # Create skos:Concept Graph
-                gConcepts.add((title_uri,self.rdf.type,self.skos.Concept))
-                gConcepts.add((title_uri,self.skos.inScheme,URIRef("https://fedlex.data.admin.ch/vocabulary/jurivoc")))
-                gConcepts.add((title_uri,self.skos.prefLabel,Literal(Title, lang="fr")))
-                gConcepts.add((title_uri,self.dct.identifier,Literal(title_dq, lang="fr")))
-                
-                for index, row in dfFilter.iterrows(): 
-                    block = row["block"]
-                    title_block = row["title_block"]
-
-                    if (not block) and (not title_block):
-                        # Generate Skos:altLabel
-                        if block == "UF":
-                            gConcepts.add((title_uri,self.skos.altLabel,Literal(title_block, lang="fr")))
+            if Title != "THÉSAURUS":
+                # get block for each title
+                dfFilter = df[df["title"].isin([Title])]
+                # find if block contain USE
+                block  = dfFilter["block"].to_list()            
+                # If bExist is false then generate a skos:Concept
+                if 'USE' not in block:
+                    # Convert title to URI            
+                    title_dq = self.dq_text(Title)
+                    title_uri = URIRef(self.jurivoc + title_dq)
                     
-                        # Generate skos:broader and skos:narrower
-                        if block == "BT":
-                            if "THÉSAURUS" in title_block:
-                                gConcepts.add((title_uri,self.skos.topConceptOf,URIRef(self.jurivoc + self.qa_text("THÉSAURUS"))))
-                                gConcepts.add((URIRef(self.jurivoc + self.qa_text("THÉSAURUS")),self.skos.hasTopConcept,title_uri))
+                    # Create skos:Concept Graph
+                    gConcepts.add((title_uri,self.rdf.type,self.skos.Concept))
+                    gConcepts.add((title_uri,self.skos.inScheme,URIRef("https://fedlex.data.admin.ch/vocabulary/jurivoc")))
+                    gConcepts.add((title_uri,self.skos.prefLabel,Literal(Title, lang="fr")))
+                    gConcepts.add((title_uri,self.dct.identifier,Literal(title_dq, lang="fr")))
+                    
+                    for index, row in dfFilter.iterrows(): 
+                        block = row["block"]
+                        title_block = row["title_block"]
 
-                            else:
-                                gConcepts.add((title_uri,self.skos.broader,URIRef(self.jurivoc + self.qa_text(title_block))))
-                                # Inverse to skos:broader
-                                gConcepts.add((URIRef(self.jurivoc + self.dq_text(title_block)),self.skos.narrower,title_uri))
+                        if (len(block) > 0) and (len(title_block) > 0):
+                            # Generate Skos:altLabel
+                            if block == "UF":
+                                gConcepts.add((title_uri,self.skos.altLabel,Literal(title_block, lang="fr")))
+                        
+                            # Generate skos:broader and skos:narrower
+                            if block == "BT":
+                                if "THÉSAURUS" in title_block:
+                                    gConcepts.add((title_uri,self.skos.topConceptOf,URIRef(self.jurivoc + self.dq_text("THÉSAURUS"))))
+                                    gConcepts.add((URIRef(self.jurivoc + self.dq_text("THÉSAURUS")),self.skos.hasTopConcept,title_uri))
 
-                        # Generate skos:scopeNote
-                        if block == "SN":
-                            gConcepts.add((title_uri,self.skos.scopeNote,Literal(title_block, lang="fr") ))
+                                else:
+                                    gConcepts.add((title_uri,self.skos.broader,URIRef(self.jurivoc + self.dq_text(title_block))))
+                                    # Inverse to skos:broader
+                                    gConcepts.add((URIRef(self.jurivoc + self.dq_text(title_block)),self.skos.narrower,title_uri))
 
-                        if block == "SA":
-                            gConcepts.add((title_uri,self.skos.related,URIRef(self.jurivoc + self.dq_text(title_block))))
+                            # Generate skos:scopeNote
+                            if block == "SN":
+                                gConcepts.add((title_uri,self.skos.scopeNote,Literal(title_block, lang="fr") ))
+
+                            if block == "SA":
+                                gConcepts.add((title_uri,self.skos.related,URIRef(self.jurivoc + self.dq_text(title_block))))
         
         self.jurivocGraph += gConcepts
         return True
@@ -80,6 +80,7 @@ class convert_graph:
             title_uri = URIRef(self.jurivoc + "THESAURUS")
             # Create skos:Concept Graph
             gConceptScheme.add((title_uri,self.rdf.type,self.skos.ConceptScheme))
+            gConceptScheme.add((title_uri,self.skos.prefLabel,Literal("THÉSAURUS", lang="fr")))
 
             for index,row in dfFilter.iterrows():
                 block = row["block"]
@@ -120,8 +121,6 @@ class convert_graph:
         # Get all title header
         titles = df["title"].to_list()
         titlesKey = pd.Series(list(dict.fromkeys(titles)))
-        if "THÉSAURUS" in titlesKey:
-            titles.pop("THÉSAURUS")
         for Title in titlesKey:
             # get block for each title
             dfFilter = df[df["title"].isin([Title])]
@@ -205,13 +204,9 @@ class convert_graph:
                     print("Graph concepts")
                     self.generate_skos_concept(df,nameFile)                    
                 
-                if '_ger.txt' in nameFile:
+                if ('_ger.txt' in nameFile) or ('_ita.txt' in nameFile):
                     print("Generate - Graph of data: {}".format(nameFile))
                     self.generate_graph_ger_ita(df,nameFile)
-
-                if '_ita.txt' in nameFile:
-                    print("Generate - Graph of data: {}".format(nameFile))
-                    self.generate_graph_ger_ita(df,nameFile)    
         print("Create graph file ")
         outputFile = self.output+".trig"
         return self.jurivocGraph.serialize(format="trig", destination= outputFile)

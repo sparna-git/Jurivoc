@@ -38,7 +38,7 @@ class dataset:
 
             if "_fre_" in nameFile:
                 # Update df for language
-                source_language.append(self.processing_language(dfPreprocessing, nameFile))
+                source_language.append(self.language_processing(dfPreprocessing, nameFile))
             else:
                 self.recordOutput.append([nameFile,dfPreprocessing])
 
@@ -173,7 +173,7 @@ class dataset:
         
         return pd.concat(data,ignore_index=True)
 
-    def processing_language(self, df:pd.DataFrame, nameFile: str) -> pd.DataFrame:
+    def language_processing(self, df:pd.DataFrame, nameFile: str) -> pd.DataFrame:
         # Get all title header
         titlesKey = pd.Series(list(dict.fromkeys(df["title"].to_list())))
         data = []

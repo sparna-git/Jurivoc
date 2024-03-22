@@ -3,9 +3,7 @@
 
 ## Requeriments
 
-* Python las version
-* Poetry
-
+* Python last version
 
 ## Installation
 
@@ -16,8 +14,9 @@ git clone git@github.com:/sparna-git/Jurivoc.git
 ```
 
 2. Install 
-
+```sh
 sudo apt install python3-pip
+```
 
 On Windows, PIP is already included for versions of Python > 3.4.
 
@@ -31,7 +30,7 @@ pip install virtualenv
 
 4. Create virtualenv
 ```sh
-python3.10 -m venv virtualenv
+python3.12 -m venv virtualenv
 ```
 
 5. Activate virtualenv
@@ -48,12 +47,12 @@ pip install -r requirements.txt
 # Running the Python script
 
 ```python
-  python convert_data_skos.py <directory input files > <directory output>
+  python convert_data_jurivoc.py <directory input files > <directory output>
 ```
 
 E.g:
 ```python
-python convert_data_skos.py ./data ./jurivoc_result
+python convert_data_jurivoc.py ./inputs/ ./jurivoc_result
 ```
 
 
