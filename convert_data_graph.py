@@ -40,7 +40,7 @@ class convert_graph:
                     gConcepts.add((title_uri,self.rdf.type,self.skos.Concept))
                     gConcepts.add((title_uri,self.skos.inScheme,URIRef("https://fedlex.data.admin.ch/vocabulary/jurivoc")))
                     gConcepts.add((title_uri,self.skos.prefLabel,Literal(Title, lang="fr")))
-                    gConcepts.add((title_uri,self.dct.identifier,Literal(title_dq, lang="fr")))
+                    gConcepts.add((title_uri,self.dct.identifier,Literal(title_dq)))
                     
                     for index, row in dfFilter.iterrows(): 
                         block = row["block"]
