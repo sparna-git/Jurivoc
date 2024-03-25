@@ -49,6 +49,18 @@ Linux : source virtualenv/bin/activate
 pip install -r requirements.txt
 ```
 
+[!IMPORTANT]
+Python version 3.6:
+
+```sh
+python -m pip install pandas 
+```
+
+```sh
+python -m -m pip install rdflib
+```
+
+
 ## Running the Python script
 
 /!\ Make sure you are in the virtualenv !
