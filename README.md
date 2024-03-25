@@ -49,8 +49,8 @@ Linux : source virtualenv/bin/activate
 pip install -r requirements.txt
 ```
 
-[!IMPORTANT]
-Python version 3.6:
+> [!IMPORTANT]
+> Python version 3.6:
 
 ```sh
 python -m pip install pandas 
