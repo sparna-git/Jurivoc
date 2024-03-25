@@ -43,11 +43,7 @@ Windows : virtualenv/Scripts/activate.bat
 Linux : source virtualenv/bin/activate
 ```
 
-6. Once in the virtual env, install the necessary dependencies from `requirements.txt` :
-
-```sh
-pip install -r requirements.txt
-```
+6. 
 
 > [!IMPORTANT]
 > Python version 3.6:
@@ -55,6 +51,12 @@ pip install -r requirements.txt
 * python -m pip install pandas 
 * python -m -m pip install rdflib
 
+> [!NOTE] 
+> Python other version
+> Once in the virtual env, install the necessary dependencies from `requirements.txt` :
+```sh
+pip install -r requirements.txt
+```
 
 
 ## Running the Python script
