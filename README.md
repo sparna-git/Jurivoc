@@ -52,13 +52,9 @@ pip install -r requirements.txt
 > [!IMPORTANT]
 > Python version 3.6:
 
-```sh
-python -m pip install pandas 
-```
+* python -m pip install pandas 
+* python -m -m pip install rdflib
 
-```sh
-python -m -m pip install rdflib
-```
 
 
 ## Running the Python script
