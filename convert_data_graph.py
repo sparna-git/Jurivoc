@@ -16,6 +16,7 @@ class convert_graph:
         self.skos = Namespace("http://www.w3.org/2004/02/skos/core#")
         self.dct = Namespace("http://purl.org/dc/terms/")
         self.owl = Namespace("http://www.w3.org/2002/07/owl#")
+        self.jurivocGraph.bind("jurivoc",self.jurivoc)
 
     def generate_skos_concept(self, df:pd.DataFrame, nameGraph : str) -> Graph:
         # Create a Graph
@@ -111,39 +112,47 @@ class convert_graph:
 
     def generate_graph_ger_ita(self,df:pd.DataFrame, nameFile) -> Graph:
 
-        triples = []
         # Dataset Languages
         dftranslate = pd.DataFrame()
         for l in self.dataset:
             if "dbLanguage" in l[0]:
                 dftranslate = l[1]
+        
+        #Merge
+        
+        dfinner = pd.merge(left=df, right=dftranslate, how='left', left_on='title', right_on='title_traduction')
+        dfinner.columns = ['Level','title','block','title_block','title_translate','language','title_language']
+
+        #dfinner.to_csv("Merge_traduction.csv",sep="|",index=False)
+        
         gLanguage = Graph()
 
         # Get all title header
-        titles = df["title"].to_list()
-        titlesKey = pd.Series(list(dict.fromkeys(titles)))
+        titles = dfinner["title_translate"].to_list()
+        titlesKey = pd.Series(titles).drop_duplicates().tolist()
         for Title in titlesKey:
             # get block for each title
-            dfFilter = df[df["title"].isin([Title])]
+            dfFilter = dfinner[dfinner["title_translate"].isin([Title])]
             # find if block contain USE
             block  = dfFilter["block"].to_list()
-            bFlag = 'USE' not in block
+            bFlag = 'USE' in block
             if bFlag == False:
+                
+                title_uri = URIRef(self.jurivoc + self.dq_text(Title))
+                title_lang = dfFilter["title"].unique()[0]
+                idLang = dfFilter["language"].unique()[0]
+
+                gLanguage.add((title_uri,self.skos.prefLabel,Literal(str(title_lang), lang=idLang)))
                 for idx, row in dfFilter.iterrows():
-                    if "UF" in row["block"]:
-                        titleCurrent = str(row["title"])
-                        titleBlock = str(row["title_block"])
-                        # find in the dictionary the title value
-                        try:
-                            traduction = dftranslate[dftranslate["title_traduction"] == titleCurrent]
-                            
-                            title = self.dq_text(str(traduction["title"].squeeze()))
-                            title_uri = URIRef(self.jurivoc + title)
-                            idLang = traduction["language"].squeeze()
-                            #print("Language: {}".format(idLang))
-                            gLanguage.add((title_uri,self.skos.prefLabel,Literal(titleBlock, lang=idLang)))
-                        except:
-                            print("Not found the taduction {}".format(titleCurrent))                        
+                    if row["block"] == "UF":
+                        titleBlock = row["title_block"]
+                        gLanguage.add((title_uri,self.skos.altLabel,Literal(str(titleBlock),lang=idLang)))
+                        
+                    if row["block"] == "SN":
+                        titleSN = row["title_block"]
+                        gLanguage.add((title_uri,self.skos.scopeNote,Literal(str(titleSN),lang=idLang) ))                    
+                
+        #gLanguage.serialize(format="ttl", destination= "test.ttl")
         self.jurivocGraph += gLanguage
         return True
         
@@ -182,7 +191,7 @@ class convert_graph:
             self.normalize_text_url(split_title,ind)
         return split_title
 
-    def graph_process(self):
+    def graph_process(self)-> Graph:
 
         if not os.path.exists(self.output):
             os.mkdir(self.output)
@@ -209,6 +218,7 @@ class convert_graph:
                     print("Generate - Graph of data: {}".format(nameFile))
                     self.generate_graph_ger_ita(df,nameFile)
         
-        outputFile = file = os.path.join(self.output,'result.trig')
+        outputFile = file = os.path.join(self.output,'result.ttl')
         print("Created graph file {}".format(outputFile))
-        return self.jurivocGraph.serialize(format="trig", destination= outputFile)
+        
+        return self.jurivocGraph.serialize(format="ttl", destination= outputFile)
