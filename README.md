@@ -49,6 +49,7 @@ Linux : source virtualenv/bin/activate
 pip install -r requirements.txt
 ```
 
+
 ## Running the Python script
 
 /!\ Make sure you are in the virtualenv !
