@@ -35,7 +35,6 @@ class dataset:
             
             # Data Quality process
             dfPreprocessing = self.preprocessing(dfGetStructure)
-
             if "_fre_" in nameFile:
                 # Update df for language
                 source_language.append(self.language_processing(dfPreprocessing, nameFile))
@@ -55,8 +54,9 @@ class dataset:
         # Create dataframe temp and update
         Dataset= self.split_row_data(df)
         dfTmp = pd.DataFrame(data=Dataset,columns=['Level', 'title','block','title_block'])
-        dfUpdate = self.update(dfTmp)
-        dfOutput = self.processing_block_sn(dfUpdate)
+        dfUpdate = self.update_title(dfTmp)
+        dfBlock = self.update_block(dfUpdate)
+        dfOutput = self.processing_block_sn(dfBlock)
         return dfOutput
 
     def split_row_data(self,df:pd.DataFrame) -> list:
@@ -98,80 +98,105 @@ class dataset:
         
         return data
 
-    def update(self,df:pd.DataFrame) -> pd.DataFrame:
+    def find_list_title(self,titlelist : list,titleValue:str) -> str:
+
+        t = ""
+        for title in titlelist:
+            if title[0] == titleValue:
+                t = title[1]
+                break
+
+        if len(t)> 0:
+            return t
+        else:
+            return titleValue
+
+        return True    
+    
+    def update_title(self,df:pd.DataFrame) -> pd.DataFrame:
         
         blockAux = ""
-
         # Evaluate and update dataframe
         indexMax = pd.Series(df["Level"].squeeze()).index.max()
         removeRow = []
+        data = []
+        data_duplicate = []
+        auxtitle = ""
+        auxtitle_full = ""
         for index, row in df.iterrows():
+            idLevel = str(row["Level"])
+            titleH = str(row["title"])
+            idBlock = str(row["block"])
+            titleBlock = str(row["title_block"])
             # Update title header
             if index < indexMax:
                 Level_nextValue = df.at[index+1,"Level"]
+            
+            if row["Level"] == 1:
                 if row["Level"] == Level_nextValue:
-                    if row["Level"] == 1:
-                        # Update title
-                        title = df.at[index,'title'] + ' ' + df.at[index+1,"title"]
-                        df.at[index,'title'] = title
-                        
-                        ## Update concepts with title updated
-                        df.loc[df['title'] == df.at[index+1,"title"], 'title'] = title
-
-                        # Drop index not necessary
-                        removeRow.append(index+1)
-
-        # Remove rows 
-        dfTemp = df.drop(removeRow)
-        # Reset index DataFrame
-        dfTemp.reset_index()
-
-        # 
-        blockAux = ""
-        for index,row in dfTemp.iterrows():
-            nLevel = row["Level"]
-            block =  row["block"]            
-            if nLevel != 1:
-                if block:
-                    # Get block Id
-                    blockAux = block
+                    # Update title
+                    title = df.at[index,'title'] + ' ' + df.at[index+1,"title"]
+                    data_duplicate.append([df.at[index+1,"title"],title])
+                    data.append([idLevel,title,idBlock, titleBlock])
+                    auxtitle = df.at[index+1,"title"]
+                    auxtitle_full = title
                 else:
-                    dfTemp.at[index,"block"] = blockAux 
-        
-        # Process when Block is SN 
-        #dfOutput = self.processing_block_sn(dfTemp)        
+                    if titleH != auxtitle:
+                        data.append([idLevel,titleH,idBlock, titleBlock])
+                    else:
+                        data.append([idLevel,auxtitle_full,idBlock, titleBlock])
+            else:
+                data.append([idLevel,titleH,idBlock, titleBlock])
+        dfTemp = pd.DataFrame(data = data,columns=["Level","title","block","title_block"])
         return dfTemp
 
-    def processing_block_sn(self,df:pd.DataFrame):
+    def update_block(self,df:pd.DataFrame) -> pd.DataFrame:
+
+        blockAux = ""
         
-        titles = list(dict.fromkeys(df["title"].to_list()))
+        for index,row in df.iterrows():
+            nLevel = row["Level"]
+            block =  row["block"]
+            if int(nLevel) > 1:
+                if block:
+                    # Get block Id
+                    blockAux = block                   
+                else:
+                    row["block"] = blockAux            
+
+        return df
+
+    def processing_block_sn(self,df:pd.DataFrame) -> pd.DataFrame:
+        
+        titlesKey = pd.Series(df["title"].to_list()).drop_duplicates().to_list()
         data = []
-        for title in titles:
+        datalist = []
+        for title in titlesKey:
             # Get Dataframe block from title id
             dfFilter = df[df["title"].isin([title])]
-            blocks = list(dict.fromkeys(dfFilter["block"].to_list()))
+            blocks = pd.Series(dfFilter["block"].to_list()).drop_duplicates().to_list() #list(dict.fromkeys(dfFilter["block"].to_list()))
             if 'SN' in blocks:
                 #Filter SN in Dataframe 
                 dfFilterSN = dfFilter[dfFilter["block"].isin(["SN"])]
                 if len(dfFilterSN) > 1:
+                    # Get all SN title
                     str_note = " ".join(str(x) for x in dfFilterSN["title_block"].to_list())
-
-                    # Find row with SN block Status
-                    idx = dfFilter[dfFilter["block"]=="SN"].index
-                    rowSN = idx.min()
-                    # Update title bloc with SN status
-                    dfFilter.at[rowSN,"title_block"] = str_note                    
-                    # Remove all row with SN status
-                    nexIdx = idx.drop(rowSN)
-                    tmp = dfFilter.drop(nexIdx)
-
-                    data.append(tmp)
-                else: 
-                    data.append(dfFilter)
+                    # Drop all SN row 
+                    dftemp = dfFilter.drop(dfFilter[dfFilter["block"] == "SN"].index)
+                    for l in dftemp.values.tolist():
+                        datalist.append(l)
+                    # Add row SN in dataframe
+                    datalist.append(["3",title,"SN",str_note])                    
+                else:
+                    for l in dfFilter.values.tolist():
+                        datalist.append(l)
             else:
-                data.append(dfFilter)
-        
-        return pd.concat(data,ignore_index=True)
+                for l in dfFilter.values.tolist():
+                    datalist.append(l)
+                
+        dfTmp = pd.DataFrame(data = datalist, columns=["Level","title","block","title_block"])
+        dfTmp.sort_values(by=['title'])
+        return dfTmp
 
     def language_processing(self, df:pd.DataFrame, nameFile: str) -> pd.DataFrame:
         # Get all title header
@@ -199,7 +224,6 @@ class dataset:
             except:
                 idLang = ""
             
-            #print("Title {} language {} traduction {} ".format(titleFR,idLang,title_traduction))
             if idLang is None:
                 log.error("Cannot found laguage {}".format(title_lang))
             else:
