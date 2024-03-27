@@ -1,0 +1,8 @@
+
+virtualenv/
+
+__pycache__/
+
+jurivoc_output/
+
+jurivoc_graph/
