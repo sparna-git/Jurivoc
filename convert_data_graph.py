@@ -210,7 +210,7 @@ class convert_graph:
 
                         if block == "SA":
                             gConcepts.add((title_uri,ns_skos.related,URIRef(ns_jurivoc + self.dataquality_text(title_block))))
-    
+        
         self.jurivocGraph += gConcepts
         return True
     
@@ -409,12 +409,16 @@ class convert_graph:
                     self.generate_Thesaurus(dfTHESAURUS) 
                     # =================== Graph Skos:Concept
                     print("Graph concepts")
-                    dfConcepts = df[~df.isin(dfSpecific)].dropna()
-                    dfConcept = dfConcepts[dfConcepts["title"] != "THÉSAURUS"]
+                    titleKey_not_Concept = pd.Series(dfSpecific["title"].to_list()).drop_duplicates().to_list()
+                    titleKey_not_Concept.append("THÉSAURUS")
+                    dfConcept = df[~df["title"].isin(titleKey_not_Concept)]
+                    dfConcept.to_csv("data_concepts.csv",sep="|",index=False)
+                    titlesKeyConcept = pd.Series(dfConcept["title"].to_list()).drop_duplicates().to_list()
                     self.generate_skos_concept(dfConcept,
-                                               pd.Series(dfConcept["title"].to_list()).drop_duplicates().to_list()
+                                               titlesKeyConcept
                                                )
                     # =================== Graph Specific blocks
+                    print("Graph specific USA and AND block")
                     self.generate_madsrdf(dfSpecific,
                                               pd.Series(dfSpecific["title"].to_list()).drop_duplicates().to_list()
                                               )        
