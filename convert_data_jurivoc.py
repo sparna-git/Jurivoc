@@ -1,6 +1,6 @@
 import os
 from JurivocData import dataset
-from convert_data_graph import convert_graph
+from convert_data_graph import convert_graph, update_graph
 import argparse
 import pathlib
 
@@ -15,6 +15,7 @@ if __name__ == '__main__':
     parser.add_argument('--d','--data',help='Path to a input file', required=True,type=pathlib.Path,dest='data')
     parser.add_argument('--o','--output',help='output Graph file directory', required=True,dest='outputFile')
     parser.add_argument('--l','--log',help='Generate output file for each input file',dest='files')
+    parser.add_argument('--g','--graph',help='Path to a Graph file ',type=pathlib.Path,dest='graph')
 
 	# Parse args
     args = parser.parse_args()
@@ -30,6 +31,7 @@ if __name__ == '__main__':
     # Output: result in list type include: Name file and DataFrame
     #
     ###############################################################
+    
     readFiles = dataset(args.data)
     # Get Dataset list
     ds = readFiles.read_file()
@@ -54,8 +56,13 @@ if __name__ == '__main__':
     #
     ###########################################################
     print("Step 2. Generate Graph Jurivoc")
-    # Instance
+    #Instance
     g = convert_graph(ds,args.outputFile)
     # Call process
-    g.graph_process()
-    print("3. End process......")
+    gOutput = g.graph_process()
+    
+    ##
+    #print("Update URIs in Skos:Concept ..")
+    # Call update graph class
+    #updateURIs_Concepts = update_graph(args.outputFile,args.graph)
+    #updateURIs_Concepts.update_uri_concepts()
