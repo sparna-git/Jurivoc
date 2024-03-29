@@ -6,7 +6,6 @@ from rdflib.term import BNode, Node
 
 # Declaration Global NAMESPACE
 ns_jurivoc = Namespace("https://fedlex.data.admin.ch/vocabulary/jurivoc/")
-ns_thesaurus = Namespace("https://fedlex.data.admin.ch/vocabulary/jurivoc#")
 ns_rdf = Namespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
 ns_rdfs = Namespace("http://www.w3.org/2000/01/rdf-schema#")
 ns_skos = Namespace("http://www.w3.org/2004/02/skos/core#")
@@ -26,113 +25,50 @@ class update_graph:
         print("Size graph: {}".format(str(len(gInput.parse(graphInput)))))
         self.graphNew += gInput.parse(graphInput)
         
-        # Graph Current
-        self.graphCurrent.parse(pathGraph)
-                
-    def findURI(self,uris:list,value):
-        
-        for l in uris:
-            if l[0] == value:
-                return l[1]
-                break
-        return True
 
+        gCurrent = Graph()
+        if os.path.exists(pathGraph):            
+            gCurrent.parse(pathGraph)
+            self.graphCurrent += gCurrent
+        else:
+            self.graphCurrent += gCurrent
+                
     def generate_new_URIS(self) -> Graph:
 
-        gConcept = Graph()
         newURIs = []
         # Generate new URI
-        URI_Id = 1
-        for sConcept,pConcept,oConcept in self.graphNew.triples((None,ns_rdf.type,ns_skos.Concept)):
-            new_uri = URIRef(ns_jurivoc+str(URI_Id))
-            newURIs.append([sConcept,new_uri])
-            URI_Id += 1
-
-        #Navigatin in the Graph
-        # Generate Nodes
-        for sConcept,pConcept,oConcept in self.graphNew.triples((None,ns_rdf.type,ns_skos.Concept)):
-            # Generate new Graph
-            new_uri = self.findURI(newURIs,sConcept)
-            # Generate triple Skos:Concept
-            gConcept.add((new_uri,ns_rdf.type,ns_skos.Concept))
-        # Generate Properties
-        for sConcept,pConcept,oConcept in self.graphNew.triples((None,ns_rdf.type,ns_skos.Concept)):            
-            # Get all predicates
-            new_uri = self.findURI(newURIs,sConcept)
-            predicates = self.graphNew.predicates(sConcept,unique=True)
-            for p in predicates:
-                for su,pr,ob in self.graphNew.triples((sConcept,p,None)):
-                    if str(pr) == "http://purl.org/dc/terms/identifier":
-                        URI_Id = new_uri.split("/")[-1]
-                        gConcept.add((new_uri,pr,Literal(URI_Id)))
-                    elif str(pr) == "http://www.w3.org/2004/02/skos/core#broader":
-                        try:
-                            new_uri_broader = self.findURI(newURIs,ob)
-                            if new_uri_broader:
-                                gConcept.add((new_uri,pr,new_uri_broader))
-                        except:
-                            print("Warning: Subject {}, the uri {} broader is not found a relation ".format(sConcept,ob))
-                            gConcept.add((new_uri,pr,ob))
-                    elif str(pr) == "http://www.w3.org/2004/02/skos/core#narrower":
-                        try:
-                            new_uri_narrower = self.findURI(newURIs,ob)
-                            if new_uri_narrower:
-                                gConcept.add((new_uri,pr,new_uri_narrower))
-                        except:
-                            print("Warning: Subject {}, the uri {} narrower is not found a relation ".format(sConcept,ob))
-                            gConcept.add((new_uri,pr,ob))
-                    elif str(pr) == "http://www.w3.org/2004/02/skos/core#related":
-                        try:
-                            new_uri_related = self.findURI(newURIs,ob)
-                            if new_uri_related:
-                                gConcept.add((new_uri,pr,new_uri_related))
-                        except:
-                            print("Warning: Subject {}, the uri {} related is not found a relation ".format(sConcept,ob))
-                            gConcept.add((new_uri,pr,ob))
-                    else:
-                        gConcept.add((new_uri,pr,ob))
-                    self.graphNew.remove((su,pr,ob))
-            self.graphNew.remove((sConcept,pConcept,oConcept))
-
-        # Thesaurus
-        gThesaurus = Graph()
-        for s,p,o in self.graphNew.triples((None,None,ns_skos.ConceptScheme)):
-            gThesaurus.add((s,p,o))
-            for su,pr,ob in self.graphNew.triples((s,ns_skos.hasTopConcept,None)):
-                try:
-                    new_uri = self.findURI(newURIs,ob)
-                    if len(new_uri) > 0:
-                        gThesaurus.add((s,pr,new_uri))
-                except:
-                    print("The {} uri, cannot found in the relation".format(ob))
-                    gThesaurus.add((s,pr,ob))
-                self.graphNew.remove((su,pr,ob))    
-        self.graphNew.remove((s,p,o))
-        
-        self.graphNew += gConcept + gThesaurus
+        for sConcept,pConcept,oConcept in self.graphNew.triples((None,None,ns_skos.Concept)):
+            newURIs.append([sConcept,sConcept.split("/")[-1]])
+        dfURIS = pd.DataFrame(data=newURIs,columns=["uri","title"])
+        dfURIS.sort_values(by=["title"], inplace=True)
+        dfURIS["newURI"] = [str(idx+1) for idx,row in dfURIS.iterrows()]
+        #dfURIS.to_csv("newUris.csv",sep="|",index=False)
+        # Update URIS
+        for index, row in dfURIS.iterrows():
+            subject_uri = row["uri"]
+            newURI = URIRef(ns_jurivoc + row["newURI"])
+           
+            if (subject_uri,None,None) in self.graphNew:
+                for s,p,o in self.graphNew.triples((subject_uri,None,None)):
+                    self.graphNew.add((newURI,p,o))
+                self.graphNew.remove((subject_uri,None,None))
+                if (None,None,subject_uri) in self.graphNew:
+                    for s,p,o in self.graphNew.triples((None,None,subject_uri)):
+                        self.graphNew.add((s,p,newURI))
+                    self.graphNew.remove((None,None,subject_uri))
+                else:
+                    print("Warning: {} Object is not exist in the Graph ".format(subject_uri))
+            else:
+                print("Warning: {} Subject is not exist in the Graph ".format(subject_uri))
         return self.graphNew
 
-    def update_graphs(self) -> Graph:
+    def update_graph_old_new(self) -> Graph:
 
-        for s,p,o in self.graphNew.triples((None,ns_rdf.type,ns_skos.Concept)):
-
-            altLabel = []
-            prefLabel = []
-
-            [altLabel.append(oAL) for sAL,pAL,oAL in self.graphNew.triples((s,ns_skos.altLabel,None))]
-            [altLabel.append(oAL) for sAL,pAL,oAL in self.graphNew.triples((s,ns_skos.prefLabel,None))]
+        for s,p,o in self.graphNew:
+            newGraph_altLabel =  self.graphNew.object(s,ns_rdf.altLabel)
+            newGraph_prefLabel =  self.graphNew.object(s,ns_rdf.prefLabel)
 
             
-
-            if str(s) == 'https://fedlex.data.admin.ch/vocabulary/jurivoc/ECHANGE_DE_PERMIS':
-                print(s)
-
-                altlabel_values = self.graphNew.objects(s,ns_skos.altLabel, unique=False)
-                preflabel_values = self.graphNew.objects(s,ns_skos.prefLabel, unique=False)
-
-                print('|'.join(map(str, altlabel_values)))
-                print('*'.join(map(str, preflabel_values)))
-
         return True
     
     #def find_uri_graph(self,subject,altlabel_value:list,preflabel_value:list) -> str:
@@ -141,7 +77,7 @@ class update_graph:
 
         if len(self.graphCurrent) > 0:
             # update the UTIS between graph current and new graph
-            print("Update graphs")
+            print("Update graphs with old graph")
             self.update_graphs()
         else:
             print("Generate new URIs in Skos:Concept")
@@ -161,7 +97,6 @@ class convert_graph:
         self.jurivocGraph = Graph()
 
         self.jurivocGraph.bind("jurivoc",ns_jurivoc)
-        self.jurivocGraph.bind("thesaurus",ns_thesaurus)
         self.jurivocGraph.bind("madsrdf",ns_madsrdf)
 
     def generate_skos_concept(self, df:pd.DataFrame, titlekey:list) -> Graph:
@@ -196,9 +131,8 @@ class convert_graph:
                         # Generate skos:broader and skos:narrower
                         if block == "BT":
                             if "THÉSAURUS" in title_block:
-                                gConcepts.add((title_uri,ns_skos.topConceptOf,URIRef(ns_thesaurus + self.dataquality_text("THÉSAURUS"))))
-                                gConcepts.add((URIRef(ns_thesaurus + self.dataquality_text("THÉSAURUS")),ns_skos.hasTopConcept,title_uri))
-
+                                gConcepts.add((title_uri,ns_skos.topConceptOf,URIRef("https://fedlex.data.admin.ch/vocabulary/jurivoc")))
+                                gConcepts.add((URIRef("https://fedlex.data.admin.ch/vocabulary/jurivoc"),ns_skos.hasTopConcept,title_uri))
                             else:
                                 gConcepts.add((title_uri,ns_skos.broader,URIRef(ns_jurivoc + self.dataquality_text(title_block))))
                                 # Inverse to skos:broader
@@ -210,6 +144,7 @@ class convert_graph:
 
                         if block == "SA":
                             gConcepts.add((title_uri,ns_skos.related,URIRef(ns_jurivoc + self.dataquality_text(title_block))))
+                            gConcepts.add((URIRef(ns_jurivoc + self.dataquality_text(title_block)),ns_skos.related,title_uri))
         
         self.jurivocGraph += gConcepts
         return True
@@ -219,7 +154,7 @@ class convert_graph:
         # get block for each title
         gConceptScheme = Graph()
         # Convert title to URI        
-        title_uri = URIRef(ns_thesaurus + "THESAURUS")
+        title_uri = URIRef("https://fedlex.data.admin.ch/vocabulary/jurivoc")
         # Create skos:Concept Graph
         gConceptScheme.add((title_uri,ns_rdf.type,ns_skos.ConceptScheme))
         gConceptScheme.add((title_uri,ns_skos.prefLabel,Literal("THÉSAURUS", lang="fr")))
@@ -230,7 +165,7 @@ class convert_graph:
             if block == "SN":
                 gConceptScheme.add((title_uri,ns_owl.versionInfo,Literal(title_block) ))
         self.jurivocGraph += gConceptScheme
-        return True    
+        return True
 
     def generate_madsrdf(self, df:pd.DataFrame, titlekey:list) -> Graph:
 
@@ -248,21 +183,21 @@ class convert_graph:
                 gSpecific.add((title_uri,ns_rdf.type,URIRef(ns_madsrdf.ComplexSubject)))
                 gSpecific.add((title_uri,ns_madsrdf.authoritativeLabel,Literal(title,lang="fr")))
 
-                componentList = []
+                datacomponentList = []
                 for idx, row in dfTitle.iterrows():
                     if len(row["block"]) > 0:
                         titleBlock = self.dataquality_text(row["title_block"])
                         uriComponent = URIRef(ns_jurivoc+titleBlock)
                         # Collection
-                        listNode = object=uriComponent
-                        componentList.append(listNode)
+                        #listNode = object=uriComponent
+                        datacomponentList.append(uriComponent)
                         #
                         gSpecific.add((uriComponent,ns_rdfs.seeAlso,title_uri))
 
-                if len(componentList) > 0:
+                if len(datacomponentList) > 0:
                     nodeList = BNode()
                     gSpecific.add((title_uri,ns_madsrdf.componentList,nodeList))
-                    Collection(gSpecific,nodeList,componentList)                
+                    Collection(gSpecific,nodeList,datacomponentList)                
             else:
                 print("Warning: the {} title contain a block USE".format(title))
                 log_df.append([dfTitle])
@@ -334,7 +269,7 @@ class convert_graph:
     def dataquality_text(self, title:str):
 
         data_input = title.upper()
-        replace_dict = {"(":"_",")":"_","[":"_","]": "_","'":"_","\"":"_"," ":"_","-":"_","Ï":"_","¿":"_","½":"_","É":"E","È":"E","Ê":"E","À":"A","Ô":"O",".":"_",",":"_","Û":"U","Î":"I","Ç":"C"}
+        replace_dict = {"(":"_",")":"_","[":"_","]": "_","'":"_","\"":"_"," ":"_","-":"_","Ï":"_","¿":"_","½":"_","É":"E","È":"E","Ê":"E","À":"A","Â":"A","Ô":"O",".":"_",",":"_","Û":"U","Î":"I","Ç":"C","/":"_"}
 
         #1. supprimer tous les caractères spéciaux, parenthèses, crochets, apostrophes, etc. : 
         #   les remplacer par “_”, garder seulement les lettres et les digits

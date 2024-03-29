@@ -80,7 +80,10 @@ class dataset:
                     idBlock = title_dataquality.split()[0]
                     if idBlock in BLOCKS_ID:
                         block = idBlock
-                        title = " ".join(title_dataquality.split(block)).lstrip()                  
+                        # Valider
+                        lTitle = title_dataquality.split()
+                        lTitle.remove(block)
+                        title = " ".join(lTitle).lstrip()
                 except:
                     block = ""
                             
@@ -115,10 +118,8 @@ class dataset:
     
     def update_title(self,df:pd.DataFrame) -> pd.DataFrame:
         
-        blockAux = ""
         # Evaluate and update dataframe
         indexMax = pd.Series(df["Level"].squeeze()).index.max()
-        removeRow = []
         data = []
         data_duplicate = []
         auxtitle = ""
@@ -126,8 +127,10 @@ class dataset:
         for index, row in df.iterrows():
             idLevel = str(row["Level"])
             titleH = str(row["title"])
+            
             idBlock = str(row["block"])
             titleBlock = str(row["title_block"])
+
             # Update title header
             if index < indexMax:
                 Level_nextValue = df.at[index+1,"Level"]
@@ -146,14 +149,18 @@ class dataset:
                     else:
                         data.append([idLevel,auxtitle_full,idBlock, titleBlock])
             else:
-                data.append([idLevel,titleH,idBlock, titleBlock])
-        dfTemp = pd.DataFrame(data = data,columns=["Level","title","block","title_block"])
-        return dfTemp
+                if titleH != auxtitle:
+                    data.append([idLevel,titleH,idBlock, titleBlock])
+                else:
+                    data.append([idLevel,auxtitle_full,idBlock, titleBlock])
+        lists_data = pd.Series(data).drop_duplicates().to_list()
+        dfTemp = pd.DataFrame(data = lists_data,columns=["Level","title","block","title_block"])
+        
+        return dfTemp 
 
     def update_block(self,df:pd.DataFrame) -> pd.DataFrame:
 
         blockAux = ""
-        
         for index,row in df.iterrows():
             nLevel = row["Level"]
             block =  row["block"]
@@ -163,7 +170,6 @@ class dataset:
                     blockAux = block                   
                 else:
                     row["block"] = blockAux            
-
         return df
 
     def processing_block_sn(self,df:pd.DataFrame) -> pd.DataFrame:
