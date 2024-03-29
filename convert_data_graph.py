@@ -41,8 +41,9 @@ class update_graph:
             newURIs.append([sConcept,sConcept.split("/")[-1]])
         dfURIS = pd.DataFrame(data=newURIs,columns=["uri","title"])
         dfURIS.sort_values(by=["title"], inplace=True)
+        dfURIS.reset_index(drop=True, inplace=True)
         dfURIS["newURI"] = [str(idx+1) for idx,row in dfURIS.iterrows()]
-        #dfURIS.to_csv("newUris.csv",sep="|",index=False)
+        dfURIS.to_csv("newUris.csv",sep="|",index=False)
         # Update URIS
         for index, row in dfURIS.iterrows():
             subject_uri = row["uri"]
