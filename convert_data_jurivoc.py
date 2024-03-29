@@ -23,7 +23,7 @@ if __name__ == '__main__':
     print("Directory Source: {}".format(args.data))
     print("Directory output: {}".format(args.outputFile))
 
-    print("Step 1. Collect of inputs files")
+    print("Step 1. Parsing input files...")
     # #############################################################
     #
     # Generate Dataset
@@ -39,7 +39,7 @@ if __name__ == '__main__':
     # Generate result for each file input
     if args.files:
 		# create folder if it does not exist
-        print("Step 1.1 Generate output file for each input")
+        print("Step 1.1 Generate log output files of dataframes...")
         if not os.path.exists(args.files):
             os.mkdir(args.files)
         
@@ -55,7 +55,7 @@ if __name__ == '__main__':
     # Output: save a graph file
     #
     ###########################################################
-    print("Step 2. Generate Graph Jurivoc")
+    print("Step 2. Generate Jurivoc SKOS graph...")
     #Instance
     g = convert_graph(ds,args.outputFile)
     # Call process
