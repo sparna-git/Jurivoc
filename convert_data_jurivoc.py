@@ -14,7 +14,7 @@ if __name__ == '__main__':
 	# Add arguments
     parser.add_argument('--d','--data',help='Path to a input file', required=True,type=pathlib.Path,dest='data')
     parser.add_argument('--o','--output',help='output Graph file directory', required=True,dest='outputFile')
-    parser.add_argument('--l','--log',help='Generate output file for each input file',dest='files')
+    parser.add_argument('--l','--log',help='Generate output file for each input file',dest='logs')
     parser.add_argument('--g','--graph',help='Path to a Graph file ',type=pathlib.Path,dest='graph')
 
 	# Parse args
@@ -38,12 +38,12 @@ if __name__ == '__main__':
     
     # create Log folder
     print("Step 1.1 Generate log output files of dataframes...")
-    if not os.path.exists(args.files):
-        os.mkdir(args.files)
+    if not os.path.exists(args.logs):
+        os.mkdir(args.logs)
     
     for l in ds:
         #print(l)
-        file = os.path.join(args.files,l[0]+'.csv')
+        file = os.path.join(args.logs,l[0]+'.csv')
         df = l[1]
         df.to_csv(file,sep="|",index=False)
 
@@ -56,16 +56,17 @@ if __name__ == '__main__':
     ###########################################################
     print("Step 2. Generate Jurivoc SKOS graph...")
     #Instance
-    g = convert_graph(ds,args.files)
+    g = convert_graph(ds,args.logs)
     # Call process
     gOutput = g.graph_process()
     if len(gOutput) > 0:
-        gIntermediare = os.path.join(args.files,'result.ttl')
+        gIntermediare = os.path.join(args.logs,'result.ttl')
         gOutput.serialize(format="ttl", destination= gIntermediare)
     
     # Call update graph class
-    updateURIs_Concepts = update_graph(gOutput,args.graph)
-    gOutputResult = updateURIs_Concepts.update_uri_concepts()
-    if len(gOutputResult) > 0:
-        result = os.path.join(args.outputFile,'result.ttl')
-        gOutputResult.serialize(format="ttl", destination= result)
+    if args.graph :
+        updateURIs_Concepts = update_graph(gOutput,args.graph)
+        gOutputResult = updateURIs_Concepts.update_uri_concepts()
+        if len(gOutputResult) > 0:
+            result = os.path.join(args.outputFile,'result.ttl')
+            gOutputResult.serialize(format="ttl", destination= result)

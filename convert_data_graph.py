@@ -29,10 +29,11 @@ class update_graph:
         
         
         gCurrent = Graph()
-        readfiles = []
-        
-        for file in glob.glob(os.path.join(pathGraph,"*.ttl")):
-            readfiles.append(file)
+        readfiles = []        
+        if pathGraph:
+            dir = os.path.join(pathGraph,"*")
+            for file in glob.glob(dir):
+                readfiles.append(file)
 
         if len(readfiles) > 0:
             gCurrent.parse([d for d in readfiles])
