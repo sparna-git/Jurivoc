@@ -36,19 +36,16 @@ if __name__ == '__main__':
     # Get Dataset list
     ds = readFiles.read_file()
     
-    # Generate result for each file input
-    if args.files:
-		# create folder if it does not exist
-        print("Step 1.1 Generate log output files of dataframes...")
-        if not os.path.exists(args.files):
-            os.mkdir(args.files)
-        
-
-        for l in ds:
-            #print(l)
-            file = os.path.join(args.files,l[0]+'.csv')
-            df = l[1]
-            df.to_csv(file,sep="|",index=False)
+    # create Log folder
+    print("Step 1.1 Generate log output files of dataframes...")
+    if not os.path.exists(args.files):
+        os.mkdir(args.files)
+    
+    for l in ds:
+        #print(l)
+        file = os.path.join(args.files,l[0]+'.csv')
+        df = l[1]
+        df.to_csv(file,sep="|",index=False)
 
     # #########################################################
     #
@@ -62,10 +59,12 @@ if __name__ == '__main__':
     g = convert_graph(ds,args.files)
     # Call process
     gOutput = g.graph_process()
+    if len(gOutput) > 0:
+        gIntermediare = os.path.join(args.files,'result.ttl')
+        gOutput.serialize(format="ttl", destination= gIntermediare)
     
-    ##
-    #print("Update URIs in Skos:Concept ..")
     # Call update graph class
-    getGraphFile = os.path.join(args.outputFile,'result_update.ttl')
-    updateURIs_Concepts = update_graph(getGraphFile,getGraphFile)
+    #getGraphFile = os.path.join(args.graph,'result_update.ttl')
+    #if os.path.exists(args.graph):
+    updateURIs_Concepts = update_graph(gOutput,args.graph)
     updateURIs_Concepts.update_uri_concepts()

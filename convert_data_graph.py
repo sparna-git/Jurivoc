@@ -4,6 +4,7 @@ import numpy as np
 from rdflib import Graph, URIRef, Namespace, Literal
 from rdflib.collection import Collection
 from rdflib.term import BNode
+import glob
 #from rdflib.paths import Path, eval_path
 #from nltk.corpus import wordnet as wn
 
@@ -16,9 +17,6 @@ ns_dct = Namespace("http://purl.org/dc/terms/")
 ns_owl = Namespace("http://www.w3.org/2002/07/owl#")
 ns_madsrdf = Namespace("http://www.loc.gov/mads/rdf/v1#")
 
-
-
-
 class update_graph:
 
     def __init__(self, graphInput : Graph, pathGraph) -> None:
@@ -29,10 +27,14 @@ class update_graph:
         # Graph New
         self.graphNew = graphInput
         
-
+        
         gCurrent = Graph()
-        if os.path.exists(pathGraph):            
-            gCurrent.parse(pathGraph)
+        readfiles = []
+        for file in glob.glob("*.ttl"):
+            readfiles.append(file)
+
+        if len(readfiles) > 0:
+            gCurrent.parse([d for d in readfiles])
             self.graphCurrent += gCurrent
         else:
             self.graphCurrent += gCurrent
@@ -339,8 +341,6 @@ class convert_graph:
 
     def graph_process(self)-> Graph:
 
-        if not os.path.exists(self.output):
-            os.mkdir(self.output)
         # read dataset
         for source in self.dataset:
             # Get source
@@ -385,8 +385,4 @@ class convert_graph:
                     #logging.info("Generate - Graph of data: {}".format(nameFile))
                     self.generate_graph_ger_ita(df,nameFile)
         
-        outputFile = file = os.path.join(self.output,'result.ttl')
-        #logging.info("Created graph file {}".format(outputFile))
-        self.jurivocGraph.serialize(format="ttl", destination= outputFile)
-
         return self.jurivocGraph
