@@ -27,9 +27,7 @@ class update_graph:
         self.graphNew.bind("jurivoc",ns_jurivoc)
 
         # Graph New
-        gInput = Graph()
-        print("Size graph: {}".format(str(len(gInput.parse(graphInput)))))
-        self.graphNew += gInput.parse(graphInput)
+        self.graphNew = graphInput
         
 
         gCurrent = Graph()
