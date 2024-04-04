@@ -59,13 +59,13 @@ if __name__ == '__main__':
     ###########################################################
     print("Step 2. Generate Jurivoc SKOS graph...")
     #Instance
-    g = convert_graph(ds,args.outputFile)
+    g = convert_graph(ds,args.files)
     # Call process
     gOutput = g.graph_process()
     
     ##
     #print("Update URIs in Skos:Concept ..")
     # Call update graph class
-    getGraphFile = os.path.join(args.graph,'result_update.ttl')
+    getGraphFile = os.path.join(args.outputFile,'result_update.ttl')
     updateURIs_Concepts = update_graph(getGraphFile,getGraphFile)
     updateURIs_Concepts.update_uri_concepts()

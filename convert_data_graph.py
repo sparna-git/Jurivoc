@@ -21,7 +21,7 @@ ns_madsrdf = Namespace("http://www.loc.gov/mads/rdf/v1#")
 
 class update_graph:
 
-    def __init__(self, graphInput, pathGraph) -> None:
+    def __init__(self, graphInput : Graph, pathGraph) -> None:
         self.graphCurrent = Graph()
         self.graphNew = Graph()
         self.graphNew.bind("jurivoc",ns_jurivoc)
@@ -103,7 +103,6 @@ class convert_graph:
         self.jurivocGraph.bind("skos",ns_skos)
         self.jurivocGraph.bind("owl",ns_owl)
         self.jurivocGraph.bind("owl",ns_owl)
-
 
     def generate_skos_concept(self, df:pd.DataFrame, titlekey:list) -> Graph:
         # Create a Graph
