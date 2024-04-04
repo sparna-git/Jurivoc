@@ -30,7 +30,8 @@ class update_graph:
         
         gCurrent = Graph()
         readfiles = []
-        for file in glob.glob("*.ttl"):
+        
+        for file in glob.glob(os.path.join(pathGraph,"*.ttl")):
             readfiles.append(file)
 
         if len(readfiles) > 0:
