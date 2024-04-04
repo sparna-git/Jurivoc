@@ -1,8 +1,11 @@
 import os
 import pandas as pd
+import numpy as np
 from rdflib import Graph, URIRef, Namespace, Literal
 from rdflib.collection import Collection
-from rdflib.term import BNode, Node
+from rdflib.term import BNode
+#from rdflib.paths import Path, eval_path
+#from nltk.corpus import wordnet as wn
 
 # Declaration Global NAMESPACE
 ns_jurivoc = Namespace("https://fedlex.data.admin.ch/vocabulary/jurivoc/")
@@ -13,13 +16,16 @@ ns_dct = Namespace("http://purl.org/dc/terms/")
 ns_owl = Namespace("http://www.w3.org/2002/07/owl#")
 ns_madsrdf = Namespace("http://www.loc.gov/mads/rdf/v1#")
 
+
+
+
 class update_graph:
 
     def __init__(self, graphInput, pathGraph) -> None:
         self.graphCurrent = Graph()
         self.graphNew = Graph()
         self.graphNew.bind("jurivoc",ns_jurivoc)
-        
+
         # Graph New
         gInput = Graph()
         print("Size graph: {}".format(str(len(gInput.parse(graphInput)))))
@@ -43,7 +49,7 @@ class update_graph:
         dfURIS.sort_values(by=["title"], inplace=True)
         dfURIS.reset_index(drop=True, inplace=True)
         dfURIS["newURI"] = [str(idx+1) for idx,row in dfURIS.iterrows()]
-        dfURIS.to_csv("newUris.csv",sep="|",index=False)
+        #dfURIS.to_csv("newUris.csv",sep="|",index=False)
         # Update URIS
         for index, row in dfURIS.iterrows():
             subject_uri = row["uri"]
@@ -52,7 +58,11 @@ class update_graph:
             if (subject_uri,None,None) in self.graphNew:
                 for s,p,o in self.graphNew.triples((subject_uri,None,None)):
                     self.graphNew.add((newURI,p,o))
+                    # Update identifier
+                    self.graphNew.set((newURI,ns_dct.identifier,Literal(newURI.split('/')[-1])))
                 self.graphNew.remove((subject_uri,None,None))
+                
+                
                 if (None,None,subject_uri) in self.graphNew:
                     for s,p,o in self.graphNew.triples((None,None,subject_uri)):
                         self.graphNew.add((s,p,newURI))
@@ -63,29 +73,20 @@ class update_graph:
                 print("Warning: {} Subject is not exist in the Graph ".format(subject_uri))
         return self.graphNew
 
-    def update_graph_old_new(self) -> Graph:
-
-        for s,p,o in self.graphNew:
-            newGraph_altLabel =  self.graphNew.object(s,ns_rdf.altLabel)
-            newGraph_prefLabel =  self.graphNew.object(s,ns_rdf.prefLabel)
-
-            
-        return True
-    
-    #def find_uri_graph(self,subject,altlabel_value:list,preflabel_value:list) -> str:
-
     def update_uri_concepts(self):
 
         if len(self.graphCurrent) > 0:
             # update the UTIS between graph current and new graph
             print("Update graphs with old graph")
-            self.update_graphs()
+            self.compare_graph_get_uri()
+            self.graphNew.serialize(format="ttl", destination= "result_graph_version{}.ttl".format(1))
         else:
             print("Generate new URIs in Skos:Concept")
             # Generate URIS in the Graph Concepts
             gOutput = self.generate_new_URIS()
             # Generated output
-            gOutput.serialize(format="ttl", destination= "result_Output.ttl")
+            outputFile = pathGraph
+            gOutput.serialize(format="ttl", destination= outputFile)
         return True
 
 
@@ -99,6 +100,10 @@ class convert_graph:
 
         self.jurivocGraph.bind("jurivoc",ns_jurivoc)
         self.jurivocGraph.bind("madsrdf",ns_madsrdf)
+        self.jurivocGraph.bind("skos",ns_skos)
+        self.jurivocGraph.bind("owl",ns_owl)
+        self.jurivocGraph.bind("owl",ns_owl)
+
 
     def generate_skos_concept(self, df:pd.DataFrame, titlekey:list) -> Graph:
         # Create a Graph
@@ -186,11 +191,17 @@ class convert_graph:
 
                 datacomponentList = []
                 for idx, row in dfTitle.iterrows():
-                    if len(row["block"]) > 0:
+
+                    if row["block"] == "USA":
                         titleBlock = self.dataquality_text(row["title_block"])
                         uriComponent = URIRef(ns_jurivoc+titleBlock)
-                        # Collection
-                        #listNode = object=uriComponent
+                        datacomponentList.append(uriComponent)
+                        #
+                        gSpecific.add((uriComponent,ns_rdfs.seeAlso,title_uri))
+                    
+                    if row["block"] == "AND":
+                        titleBlock = self.dataquality_text(row["title_block"])
+                        uriComponent = URIRef(ns_jurivoc+titleBlock)
                         datacomponentList.append(uriComponent)
                         #
                         gSpecific.add((uriComponent,ns_rdfs.seeAlso,title_uri))
@@ -211,13 +222,22 @@ class convert_graph:
         print("Save in graph # {} rows".format(len(df)))
 
         gLanguage = Graph()
-        for index,row in df.iterrows():
+        for index,row in df[df['level'] > 1].iterrows():
             title = row["title"]
             title_uri = URIRef(ns_jurivoc + self.dataquality_text(title))
-            idLang = row["language"]
-            title_language = row["title_traduction"]
+            idLang = row["block"]
+            lang = ""
+            if idLang == 'ITA':
+                lang='fr'
 
-            gLanguage.add((title_uri,ns_skos.prefLabel,Literal(title_language, lang=idLang)))
+            if idLang == 'GER':
+                lang='de'
+            
+            title_language = row["title_block"]
+
+            #print('Title: {} Lang: {} titleLang {}'.format(title,title_language,idLang))
+
+            gLanguage.add((title_uri,ns_skos.prefLabel,Literal(title_language, lang=lang)))
 
         self.jurivocGraph += gLanguage
         return True
@@ -230,10 +250,14 @@ class convert_graph:
             if "dbLanguage" in l[0]:
                 dftranslate = l[1]
         
+        print("Test")
+        print(df)
+
         #Merge
-        
-        dfinner = pd.merge(left=df, right=dftranslate, how='inner', left_on='title', right_on='title_traduction')
-        dfinner.columns = ['Level','title','block','title_block','title_translate','language','title_language']
+        #dfLanguage = dftranslate[dftranslate['level'] > 1]
+        dfinner = pd.merge(left=df, right=dftranslate, how='inner', left_on='title', right_on='title_block')
+        print(dfinner)
+        dfinner.columns = ['level','title','block','title_block','title_translate','language','title_language']
 
         #dfinner.to_csv("Merge_traduction.csv",sep="|",index=False)        
         gLanguage = Graph()
@@ -327,6 +351,7 @@ class convert_graph:
             df = source[1]
 
             if 'dbLanguage' in nameFile:
+                #logging.info("Generate - Graph of Language {}".format("DB Language"))
                 print("Generate - Graph of Language {}".format("DB Language"))
                 self.generate_language_graph(df)
             else:                
@@ -338,13 +363,13 @@ class convert_graph:
                     dfSpecific = self.get_specific_usa_and(df,titlesKey)
                     dfSpecific.to_csv("data_usa_and.csv",sep="|",index=False)
 
-                    print("Generate - Graph of data: {} # rows {}".format(nameFile, len(df)))
+                    #logging.info("Graph of data: {} # rows {}".format(nameFile, len(df)))
                     # =================== Graph THÉSAURUS
-                    print("Graph THÉSAURUS")
+                    #logging.info("Graph THÉSAURUS")
                     dfTHESAURUS = df[df["title"] == "THÉSAURUS"]
                     self.generate_Thesaurus(dfTHESAURUS) 
                     # =================== Graph Skos:Concept
-                    print("Graph concepts")
+                    #logging.info("Graph skos:Concepts")
                     titleKey_not_Concept = pd.Series(dfSpecific["title"].to_list()).drop_duplicates().to_list()
                     titleKey_not_Concept.append("THÉSAURUS")
                     dfConcept = df[~df["title"].isin(titleKey_not_Concept)]
@@ -354,17 +379,17 @@ class convert_graph:
                                                titlesKeyConcept
                                                )
                     # =================== Graph Specific blocks
-                    print("Graph specific USA and AND block")
+                    #logging.info("Graph specific USA and AND block")
                     self.generate_madsrdf(dfSpecific,
                                               pd.Series(dfSpecific["title"].to_list()).drop_duplicates().to_list()
                                               )        
                 
                 if ('_ger.txt' in nameFile) or ('_ita.txt' in nameFile):
-                    print("Generate - Graph of data: {}".format(nameFile))
+                    #logging.info("Generate - Graph of data: {}".format(nameFile))
                     self.generate_graph_ger_ita(df,nameFile)
         
         outputFile = file = os.path.join(self.output,'result.ttl')
-        print("Created graph file {}".format(outputFile))
+        #logging.info("Created graph file {}".format(outputFile))
         self.jurivocGraph.serialize(format="ttl", destination= outputFile)
 
         return self.jurivocGraph

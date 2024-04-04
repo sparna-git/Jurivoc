@@ -43,7 +43,9 @@ if __name__ == '__main__':
         if not os.path.exists(args.files):
             os.mkdir(args.files)
         
+
         for l in ds:
+            #print(l)
             file = os.path.join(args.files,l[0]+'.csv')
             df = l[1]
             df.to_csv(file,sep="|",index=False)
@@ -64,5 +66,6 @@ if __name__ == '__main__':
     ##
     #print("Update URIs in Skos:Concept ..")
     # Call update graph class
-    #updateURIs_Concepts = update_graph(args.outputFile,args.graph)
-    #updateURIs_Concepts.update_uri_concepts()
+    getGraphFile = os.path.join(args.graph,'result_update.ttl')
+    updateURIs_Concepts = update_graph(getGraphFile,getGraphFile)
+    updateURIs_Concepts.update_uri_concepts()
