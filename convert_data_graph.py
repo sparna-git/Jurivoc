@@ -79,16 +79,12 @@ class update_graph:
         if len(self.graphCurrent) > 0:
             # update the UTIS between graph current and new graph
             print("Update graphs with old graph")
-            self.compare_graph_get_uri()
-            self.graphNew.serialize(format="ttl", destination= "result_graph_version{}.ttl".format(1))
+            gOutput = self.compare_graph_get_uri()            
         else:
             print("Generate new URIs in Skos:Concept")
             # Generate URIS in the Graph Concepts
-            gOutput = self.generate_new_URIS()
-            # Generated output
-            outputFile = pathGraph
-            gOutput.serialize(format="ttl", destination= outputFile)
-        return True
+            gOutput = self.generate_new_URIS()            
+        return gOutput
 
 
 class convert_graph:

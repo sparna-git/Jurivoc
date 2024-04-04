@@ -64,7 +64,8 @@ if __name__ == '__main__':
         gOutput.serialize(format="ttl", destination= gIntermediare)
     
     # Call update graph class
-    #getGraphFile = os.path.join(args.graph,'result_update.ttl')
-    #if os.path.exists(args.graph):
     updateURIs_Concepts = update_graph(gOutput,args.graph)
-    updateURIs_Concepts.update_uri_concepts()
+    gOutputResult = updateURIs_Concepts.update_uri_concepts()
+    if len(gOutputResult) > 0:
+        result = os.path.join(args.outputFile,'result.ttl')
+        gOutputResult.serialize(format="ttl", destination= result)
