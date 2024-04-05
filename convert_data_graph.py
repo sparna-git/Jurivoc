@@ -65,9 +65,9 @@ class update_graph:
                         self.graphNew.add((s,p,newURI))
                     self.graphNew.remove((None,None,subject_uri))
                 else:
-                    print("Warning: {} Object is not exist in the Graph ".format(subject_uri))
+                    print("Warning: no triples found with {} as object".format(subject_uri))
             else:
-                print("Warning: {} Subject is not exist in the Graph ".format(subject_uri))
+                print("Warning: no triples found with {} as subject".format(subject_uri))
         return True
 
     def update_uri_concepts(self):
