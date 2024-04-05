@@ -111,7 +111,6 @@ class update_graph:
         # Get all data in the Old Graph
         dfNew = [[s,self.get_alt_label(s,self.graphNew),self.get_pref_label(s,self.graphNew) ] for s,p,o in self.graphNew]
 
-
     def get_predicate_altLabe_prefLabel(self, gProcess) -> pd.DataFrame:
 
         list_AltLabel = []
@@ -161,15 +160,84 @@ class update_graph:
             self.graphNew.remove((uri_source,None,None))
         return True
     
+    def add_new_concept_graph(self, df:pd.DataFrame):
+
+        print('Add new concept')
+        nSeq = []
+        uriKey = pd.Series(df['uri'].to_list()).drop_duplicates().to_list()
+        print(uriKey)
+        [nSeq.append(s.split('/')[-1]) for s,p,o in self.graphCurrent.triples((None,None,ns_skos.Concept))]
+        nMAxOld = pd.Series(nSeq).max()
+        # Update Subject
+        for uri_source in uriKey:
+            print(uri_source)
+            # get block for each title
+            dfFilter = df[df["uri"].isin([uri_source])]
+            print(dfFilter)
+            
+            nMAxSequence = int(nMAxOld) + 1 
+
+            print('Generate concept')
+            
+            if (uri_source,None,None) in self.graphNew:
+                uri = URIRef(ns_jurivoc+str(nMAxSequence))
+                for s,p,o in self.graphNew.triples((uri_source,None,None)):
+                    self.graphNew.add((uri,p,o))
+                    self.graphNew.set((uri,ns_dct.identifier,Literal(str(nMAxSequence))))
+
+                self.graphNew.remove((uri_source,None,None))
+        return True
+
     def match_uri_update(self,dfNew:pd.DataFrame,dfOld:pd.DataFrame):
 
-        dfMerge = pd.merge(dfNew,dfOld,left_on=['description'], right_on=['description'])
+        dfMerge = pd.merge(dfNew,dfOld,how='left',on=['description'])
         dfUpdate = dfMerge.rename({'uri_x': 'uri', 'uri_y': 'uri_old'}, axis='columns')
-        dfUpdate.to_csv('match.csv',sep='|',index=False)
-        self.update_graph_subject(dfUpdate)
+        
+        dfMatch = dfUpdate[~dfUpdate['uri_old'].isnull()]
+        self.update_graph_subject(dfMatch)
+        #dfMatch.to_csv('match.csv',sep='|',index=False)
+        dfNew = dfUpdate[dfUpdate['uri_old'].isnull()]
+        self.add_new_concept_graph(dfNew)
+        #dfNew.to_csv('notmatch.csv',sep='|',index=False)
 
         return True
     
+    def dataquality_text(self, title:str):
+
+        data_input = title.upper()
+        replace_dict = {"(":"_",")":"_","[":"_","]": "_","'":"_","\"":"_"," ":"_","-":"_","Ï":"_","¿":"_","½":"_","É":"E","È":"E","Ê":"E","À":"A","Â":"A","Ô":"O",".":"_",",":"_","Û":"U","Î":"I","Ç":"C","/":"_"}
+
+        #1. supprimer tous les caractères spéciaux, parenthèses, crochets, apostrophes, etc. : 
+        #   les remplacer par “_”, garder seulement les lettres et les digits
+        for old,new in replace_dict.items():
+            data_input = data_input.replace(old,new)
+
+        pTitle = list(data_input)
+        TITLE_URI = ""        
+        if pTitle[-1] == "_":
+            tlist = self.normalize_text_url(pTitle,-1)
+            TITLE_URI = ''.join(tlist)        
+        elif pTitle[0] == "_":
+            tlist = self.normalize_text_url(pTitle,0)
+            TITLE_URI = ''.join(tlist)
+        else:
+            TITLE_URI = data_input
+
+        return TITLE_URI
+
+    def normalize_text_url(self, split_title : list,ind : int):
+
+        if split_title[ind] != "_":
+            return split_title
+        else:
+            if ind == -1:
+                split_title.pop((len(split_title)-1))
+            if ind == 0:
+                split_title.pop(0)
+            self.normalize_text_url(split_title,ind)
+        return split_title
+
+
     def compare_graph_get_uri(self) -> Graph:
         
         # Get Data value URI, LABELS
