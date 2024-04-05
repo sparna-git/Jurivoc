@@ -1,0 +1,29 @@
+ ARME FACTICE
+   BT   JEU
+
+ console de jeu
+   USA  JEU
+   AND  PUBLICATION ÉLECTRONIQUE
+
+ JEU
+   UF   jouet
+   BT   THÉSAURUS
+   NT   JEU D'ARGENT
+        ARME FACTICE
+   UFA  console de jeu
+   SA   ARME FACTICE
+
+ JEU D'ARGENT
+   BT   JEU
+1(cont)
+
+ jouet
+   USE  JEU
+
+ PUBLICATION ÉLECTRONIQUE
+   BT   THÉSAURUS
+   UFA  console de jeu
+
+ THÉSAURUS
+   NT   JEU
+   SN   v. 19.01.2024
