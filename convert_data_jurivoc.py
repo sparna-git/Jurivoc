@@ -79,5 +79,5 @@ if __name__ == '__main__':
     updateURIs_Concepts = update_graph(gOutput,s)
     gOutputResult = updateURIs_Concepts.update_uri_concepts()
     if len(gOutputResult) > 0:
-        result = os.path.join(args.output,'jurivvoc.ttl')
+        result = os.path.join(args.output,'jurivoc.ttl')
         gOutputResult.serialize(format="ttl", destination= result)
