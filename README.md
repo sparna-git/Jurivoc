@@ -3,7 +3,7 @@
 
 ## Requirements
 
-* Python 3.12
+* Python 3.6
 
 
 ## Installation
@@ -66,7 +66,7 @@ e.g, without a previous version (= initial run):
 python convert_data_jurivoc.py --data inputs --output jurivoc_graph --log jurivoc_log
 ```
 
-with a previous versio:
+with a previous version :
 
 ```sh
 python convert_data_jurivoc.py --data inputs --output jurivoc_graph --log jurivoc_log --previousVersion jurivoc_graph_v1
@@ -82,7 +82,18 @@ The parameters are the following:
   - jurivoc_fre_ita.txt
 - `--output` Result Directory (required)
 - `--log` (optional) Log Directory where the raw dataframes resulting from file parsing will be logged (optional). This directory will also contain a Turtle log of the graph before trying to retrieve the URIs from the previous version.
-- `--previousVersion` (optional) directory where the previous version of jurivoc will be read to fetch the previous URIs
+- `--previousVersion` (optional) directory where the previous version of jurivoc will be read to fetch the previous URIs (that directory is expected to contain the file `jurivoc.ttl` that was the output of the previous run)
+
+## Notes on URI
+
+The URI generation works in 2 steps :
+
+1. In the first step, URIs are given based on the French labels. e.g. `jurivoc:PUBLICATION_ELECTRONIQUE`. The SKOS thesaurus with these URIs is logged into `<log directory>/jurivoc_with_label_uris.ttl`
+2. Then, in a second step, 2 things can happen :
+  1. Either the parameter `--previousVersion` was *not* provided, indicating that it is the initial run, then a sequential id will be given to every concept based on the alphabetical order of their URI
+  2. Either the parameter `--previousVersion` was provided, then an attempt is made to retrieve the previous URI from the previous version :
+    - A search is made on the French, Italian and German prefLabel of each concept. If _1_ prefLabel matches, then the URI is retrieved from the previous concept. This means that if 1 or 2 prefLabel have changed, but one stayed the same, the Concept will retain its previous URI
+    - If no prefLabel matched, a new URI based on the sequential identifier will be given to the concept 
 
 ## Notes
 
