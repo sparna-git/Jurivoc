@@ -111,7 +111,6 @@ class update_graph:
         # Get all data in the Old Graph
         dfNew = [[s,self.get_alt_label(s,self.graphNew),self.get_pref_label(s,self.graphNew) ] for s,p,o in self.graphNew]
 
-        print(dfNew)
 
     def get_predicate_altLabe_prefLabel(self, gProcess) -> pd.DataFrame:
 
@@ -164,8 +163,9 @@ class update_graph:
     
     def match_uri_update(self,dfNew:pd.DataFrame,dfOld:pd.DataFrame):
 
-        dfMerge = pd.merge(dfNew,dfOld,how='inner', left_on=['description'], right_on=['description'])
+        dfMerge = pd.merge(dfNew,dfOld,left_on=['description'], right_on=['description'])
         dfUpdate = dfMerge.rename({'uri_x': 'uri', 'uri_y': 'uri_old'}, axis='columns')
+        dfUpdate.to_csv('match.csv',sep='|',index=False)
         self.update_graph_subject(dfUpdate)
 
         return True
@@ -229,7 +229,6 @@ class convert_graph:
                 # If bExist is false then generate a skos:Concept
                 if 'USE' not in block:
                     # Convert title to URI       
-                    print('Title {}'.format(Title) )     
                     title_dq = self.dataquality_text(Title)
                     title_uri = URIRef(ns_jurivoc + title_dq)
                     
@@ -350,7 +349,6 @@ class convert_graph:
 
     def generate_graph_ger_ita(self,df:pd.DataFrame, nameFile) -> Graph:
 
-        print('Language {}'.format(nameFile))
         # Dataset Languages
         dftranslate = pd.DataFrame()
         for l in self.dataset:
@@ -369,7 +367,6 @@ class convert_graph:
         dfTmp = dfMerge[dfMerge['level'] != 1]
         dfinner = dfTmp.reset_index(drop=True)
 
-        print('Language Filter: {} '.format(keyLanguage))
         dfDB = dfinner[dfinner['language'].isin([keyLanguage])]
         #dfDB.to_csv('filter.csv',sep='|',index=False)
 
@@ -482,7 +479,7 @@ class convert_graph:
                     #logging.info("Graph THÉSAURUS")
                     dfTHESAURUS = df[df["title"] == "THÉSAURUS"]
                     self.generate_Thesaurus(dfTHESAURUS) 
-                    print("Thesaurus")
+                    
                     # =================== Graph Skos:Concept
                     #logging.info("Graph skos:Concepts")
                     titleKey_not_Concept = pd.Series(dfSpecific["title"].to_list()).drop_duplicates().to_list()
@@ -495,13 +492,12 @@ class convert_graph:
                     self.generate_skos_concept(dfConcept,
                                                titlesKeyConcept
                                                )
-                    print("Concepts")
                     # =================== Graph Specific blocks
                     #logging.info("Graph specific USA and AND block")
                     self.generate_madsrdf(dfSpecific,
                                               pd.Series(dfSpecific["title"].to_list()).drop_duplicates().to_list()
                                               )        
-                    print("madsrdf")                
+                    
                 if ('jurivoc_ger' in nameFile) or ('jurivoc_ita' in nameFile):
                     #logging.info("Generate - Graph of data: {}".format(nameFile))
                     print('Generate Graph: {}'.format(nameFile))

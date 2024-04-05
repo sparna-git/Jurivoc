@@ -86,25 +86,25 @@ class dataset:
                 nextIdx = idx+1
                 level_nextValue = df.at[idx+1,"level"]            
                 
-                if int(row['level']) == 1:
-                    if row['level'] == level_nextValue:
-                        # Update title
-                        title = row['title'] + ' ' + df.at[nextIdx,'title']
-                        #data_duplicate.append([df.at[idx+1,"title"],title])
-                        data.append([row['level'],title])
-                        auxtitle = df.at[nextIdx,'title']
-                        auxtitle_full = title                    
-                    else:
-                        if row['title'] != auxtitle:
-                            data.append([row['level'],row['title']])
-                    #    else:
-                    #        data.append([row['level'],auxtitle_full])
+            if int(row['level']) == 1:
+                if row['level'] == level_nextValue:
+                    # Update title
+                    title = row['title'] + ' ' + df.at[nextIdx,'title']
+                    #data_duplicate.append([df.at[idx+1,"title"],title])
+                    data.append([row['level'],title])
+                    auxtitle = df.at[nextIdx,'title']
+                    auxtitle_full = title                    
                 else:
+                    if row['title'] != auxtitle:
+                        data.append([row['level'],row['title']])
+                #    else:
+                #        data.append([row['level'],auxtitle_full])
+            else:
                     if row['title'] != auxtitle:
                         data.append([row['level'],row['title']])
                     else:
                         data.append([row['level'],auxtitle_full])
-                
+            
         dfProcess = pd.DataFrame(data=data,columns=['level','title'])        
         return dfProcess
     
@@ -306,6 +306,7 @@ class dataset:
     def language_processing(self, df:pd.DataFrame, nameFile: str) -> pd.DataFrame:
 
         dftitles = self.update_titles(df)
+        
         df_block = self.add_block_column(dftitles)
         df_title = self.add_title_block(df_block)
         dfUpdateUF = self.update_UF_title_block(df_title)
@@ -318,6 +319,7 @@ class dataset:
         dfOutput = dfOutputLanguage.rename(columns={"block":"language","title_block":"title_traduction"})
         
         dfOutput['language'] = dfOutput['language'].apply([lambda l : LANGUAGE_DICT[l]])
+
         return dfOutput
 
     def read_file(self) -> list:
