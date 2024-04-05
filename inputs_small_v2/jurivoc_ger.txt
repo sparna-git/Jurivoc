@@ -1,0 +1,30 @@
+ GELDSPIEL
+   BT   SPIEL
+   SN   Tradcution de JEU D'ARGENT
+
+ SCHEINWAFFE
+   BT   SPIEL
+   SN   Traduction de ARME FACTICE
+
+ SPIEL
+   UF   spielzeug
+   BT   THESAURUS
+   NT   GELDSPIEL
+        SCHEINWAFFE
+   UFA  spielkonsole
+   SA   SCHEINWAFFE
+
+ spielzeug
+   USE  SPIEL
+
+ TEST
+   BT   THESAURUS
+
+ NEUE
+   BT   THESAURUS
+
+ THESAURUS
+   NT   SPIEL
+        TEST
+        NEUE
+   SN   v. 19.01.2024

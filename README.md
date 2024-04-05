@@ -56,14 +56,20 @@ pip install -r requirements.txt
 
 The command synopsis is the following:
 
-```python
-  python convert_data_jurivoc.py --data <directory input files > --output <directory output> --log <directory log>
+```sh
+  python convert_data_jurivoc.py --data <directory input files > --output <directory output> --log <directory log> --previousVersion <directory of previous version>
 ```
 
-e.g:
+e.g, without a previous version (= initial run):
 
-```python
+```sh
 python convert_data_jurivoc.py --data inputs --output jurivoc_graph --log jurivoc_log
+```
+
+with a previous versio:
+
+```sh
+python convert_data_jurivoc.py --data inputs --output jurivoc_graph --log jurivoc_log --previousVersion jurivoc_graph_v1
 ```
 
 The parameters are the following:
@@ -75,8 +81,8 @@ The parameters are the following:
   - jurivoc_fre_ger.txt
   - jurivoc_fre_ita.txt
 - `--output` Result Directory (required)
-- `--log` Log Directory where the raw dataframes resulting from file parsing will be logged (optional)
-
+- `--log` (optional) Log Directory where the raw dataframes resulting from file parsing will be logged (optional). This directory will also contain a Turtle log of the graph before trying to retrieve the URIs from the previous version.
+- `--previousVersion` (optional) directory where the previous version of jurivoc will be read to fetch the previous URIs
 
 ## Notes
 

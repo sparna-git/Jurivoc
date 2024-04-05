@@ -1,0 +1,36 @@
+
+ console
+   USA  GIOCO
+   AND  PUBBLICAZIONE ELETTRONICA
+
+ ARMA FINTA 1
+   BT   GIOCO
+
+ giocattolo
+   USE  GIOCO
+
+ GIOCO
+   UF   giocattolo
+   BT   THESAURUS
+   NT   GIOCO IN DENARO
+   UFA  console
+   SA   ARMA FINTA 1
+
+ GIOCO IN DENARO
+   BT   GIOCO
+   SN   Traduction de JEU D'ARGENT
+
+ PUBBLICAZIONE ELETTRONICA
+   BT   THESAURUS
+
+ TEST
+   BT   THESAURUS
+
+ NUOVO
+   BT   THESAURUS
+
+ THESAURUS
+   NT   GIOCO
+        TEST
+        NUOVO
+   SN   v. 19.01.2024
