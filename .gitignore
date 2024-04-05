@@ -6,3 +6,7 @@ __pycache__/
 jurivoc_output/
 
 jurivoc_graph/
+
+jurivoc_log/
+
+jurivoc_graph_v1/
