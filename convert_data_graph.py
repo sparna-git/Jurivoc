@@ -32,10 +32,10 @@ class update_graph:
             else:
                 if os.path.isdir(pathGraph):
                     for f in os.listdir(pathGraph):
-                        nameFile = f
-                        fileInput = os.path.join(self.directoryFile, f)
+                        fileInput = os.path.join(pathGraph, f)
                         if os.path.isfile(fileInput):
-                            self.graphCurrent.parse(pathGraph)
+
+                            self.graphCurrent.parse(fileInput)
 
     def generate_new_URIS(self) -> Graph:
 
@@ -69,7 +69,19 @@ class update_graph:
             else:
                 print("Warning: no triples found with {} as subject".format(subject_uri))
         return True
-
+    
+    def get_lang(self, text) -> str:
+        language = ""
+        # language
+        if isinstance(text[1], Literal):
+            if text[1].language is not None:
+                language = '@'+f"{text[1].language}"
+            else:
+                language = ""
+        else:
+            language = ""
+        return language
+    
     def get_alt_label(self,subject,g:Graph) -> list:
 
         list_AltLabel = []
@@ -115,7 +127,6 @@ class update_graph:
             #[list_AltLabel.append(self.read_data(l)) for l in listOfAltLabel]
             #[print("Type Input {} result {}".format(type(l),self.read_data(l))) for l in listOfAltLabel]
             
-
             listOfPrefLabel = list(eval_path(gProcess,
                                     (s,ns_skos.prefLabel,None)
                                     ))
@@ -125,7 +136,7 @@ class update_graph:
         dfAlt = pd.DataFrame(data=list_AltLabel, columns=['uri','description'])
         dfPref = pd.DataFrame(data=list_PrefLabel, columns=['uri','description'])
         # Merge the alt and pref lables in a dataframe only
-        dfMerge = dfAlt + dfPref #pd.merge(dfAlt,dfPref,on="uri") #dfAlt.merge(dfPref,left_on="uri",right_on="uri")
+        dfMerge = dfAlt # + dfPref #pd.merge(dfAlt,dfPref,on="uri") #dfAlt.merge(dfPref,left_on="uri",right_on="uri")
         return dfAlt,dfPref,dfMerge
     
     def update_graph_subject(self, df:pd.DataFrame):
@@ -149,10 +160,9 @@ class update_graph:
     
     def match_uri_update(self,dfNew:pd.DataFrame,dfOld:pd.DataFrame):
 
-        dfMerge = pd.merge(dfNew,dfOld, on=['altLabel','prefLabel'])
-        print(dfMerge)
-
-        self.update_graph_subject(dfMerge)
+        dfMerge = pd.merge(dfNew,dfOld,how='inner', left_on=['description'], right_on=['description'])
+        dfUpdate = dfMerge.rename({'uri_x': 'uri', 'uri_y': 'uri_old'}, axis='columns')
+        self.update_graph_subject(dfUpdate)
 
         return True
     
@@ -205,52 +215,53 @@ class convert_graph:
         # Create a Graph
         
         gConcepts = Graph()
-        key = pd.Series(titlekey).drop('').to_list()
-        for Title in key:
-            # get block for each title
-            dfFilter = df[df["title"].isin([Title])]
-            # find if block contain USE
-            block  = dfFilter["block"].to_list()            
-            # If bExist is false then generate a skos:Concept
-            if 'USE' not in block:
-                # Convert title to URI       
-                print('Title {}'.format(Title) )     
-                title_dq = self.dataquality_text(Title)
-                title_uri = URIRef(ns_jurivoc + title_dq)
-                
-                # Create skos:Concept Graph
-                gConcepts.add((title_uri,ns_rdf.type,ns_skos.Concept))
-                gConcepts.add((title_uri,ns_skos.inScheme,URIRef('https://fedlex.data.admin.ch/vocabulary/jurivoc')))
-                gConcepts.add((title_uri,ns_skos.prefLabel,Literal(Title, lang="fr")))
-                gConcepts.add((title_uri,ns_dct.identifier,Literal(title_dq)))
-                
-                for index, row in dfFilter.iterrows(): 
-                    block = row["block"]
-                    title_block = row["title_block"]
-
-                    if (len(block) > 0) and (len(title_block) > 0):
-                        # Generate Skos:altLabel
-                        if block == "UF":
-                            gConcepts.add((title_uri,ns_skos.altLabel,Literal(title_block, lang="fr")))
-                    
-                        # Generate skos:broader and skos:narrower
-                        if block == "BT":
-                            if "THÉSAURUS" in title_block:
-                                gConcepts.add((title_uri,ns_skos.topConceptOf,URIRef("https://fedlex.data.admin.ch/vocabulary/jurivoc")))
-                                gConcepts.add((URIRef("https://fedlex.data.admin.ch/vocabulary/jurivoc"),ns_skos.hasTopConcept,title_uri))
-                            else:
-                                gConcepts.add((title_uri,ns_skos.broader,URIRef(ns_jurivoc + self.dataquality_text(title_block))))
-                                # Inverse to skos:broader
-                                gConcepts.add((URIRef(ns_jurivoc + self.dataquality_text(title_block)),ns_skos.narrower,title_uri))
-
-                        # Generate skos:scopeNote
-                        if block == "SN":
-                            gConcepts.add((title_uri,ns_skos.scopeNote,Literal(title_block, lang="fr") ))
-
-                        if block == "SA":
-                            gConcepts.add((title_uri,ns_skos.related,URIRef(ns_jurivoc + self.dataquality_text(title_block))))
-                            gConcepts.add((URIRef(ns_jurivoc + self.dataquality_text(title_block)),ns_skos.related,title_uri))
         
+        for Title in titlekey:
+            if len(Title) > 0:
+                # get block for each title
+                dfFilter = df[df["title"].isin([Title])]
+                # find if block contain USE
+                block  = dfFilter["block"].to_list()
+                # If bExist is false then generate a skos:Concept
+                if 'USE' not in block:
+                    # Convert title to URI       
+                    print('Title {}'.format(Title) )     
+                    title_dq = self.dataquality_text(Title)
+                    title_uri = URIRef(ns_jurivoc + title_dq)
+                    
+                    # Create skos:Concept Graph
+                    gConcepts.add((title_uri,ns_rdf.type,ns_skos.Concept))
+                    gConcepts.add((title_uri,ns_skos.inScheme,URIRef('https://fedlex.data.admin.ch/vocabulary/jurivoc')))
+                    gConcepts.add((title_uri,ns_skos.prefLabel,Literal(Title, lang="fr")))
+                    gConcepts.add((title_uri,ns_dct.identifier,Literal(title_dq)))
+                    
+                    for index, row in dfFilter.iterrows(): 
+                        block = row["block"]
+                        title_block = row["title_block"]
+
+                        if (len(block) > 0) and (len(title_block) > 0):
+                            # Generate Skos:altLabel
+                            if block == "UF":
+                                gConcepts.add((title_uri,ns_skos.altLabel,Literal(title_block, lang="fr")))
+                        
+                            # Generate skos:broader and skos:narrower
+                            if block == "BT":
+                                if "THÉSAURUS" in title_block:
+                                    gConcepts.add((title_uri,ns_skos.topConceptOf,URIRef("https://fedlex.data.admin.ch/vocabulary/jurivoc")))
+                                    gConcepts.add((URIRef("https://fedlex.data.admin.ch/vocabulary/jurivoc"),ns_skos.hasTopConcept,title_uri))
+                                else:
+                                    gConcepts.add((title_uri,ns_skos.broader,URIRef(ns_jurivoc + self.dataquality_text(title_block))))
+                                    # Inverse to skos:broader
+                                    gConcepts.add((URIRef(ns_jurivoc + self.dataquality_text(title_block)),ns_skos.narrower,title_uri))
+
+                            # Generate skos:scopeNote
+                            if block == "SN":
+                                gConcepts.add((title_uri,ns_skos.scopeNote,Literal(title_block, lang="fr") ))
+
+                            if block == "SA":
+                                gConcepts.add((title_uri,ns_skos.related,URIRef(ns_jurivoc + self.dataquality_text(title_block))))
+                                gConcepts.add((URIRef(ns_jurivoc + self.dataquality_text(title_block)),ns_skos.related,title_uri))
+            
         self.jurivocGraph += gConcepts
         return True
     
@@ -401,8 +412,7 @@ class convert_graph:
             data_input = data_input.replace(old,new)
 
         pTitle = list(data_input)
-        TITLE_URI = ""
-        
+        TITLE_URI = ""        
         if pTitle[-1] == "_":
             tlist = self.normalize_text_url(pTitle,-1)
             TITLE_URI = ''.join(tlist)        
