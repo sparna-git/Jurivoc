@@ -135,7 +135,7 @@ class update_graph:
         dfAlt = pd.DataFrame(data=list_AltLabel, columns=['uri','description'])
         dfPref = pd.DataFrame(data=list_PrefLabel, columns=['uri','description'])
         # Merge the alt and pref lables in a dataframe only
-        dfMerge = dfAlt # + dfPref #pd.merge(dfAlt,dfPref,on="uri") #dfAlt.merge(dfPref,left_on="uri",right_on="uri")
+        dfMerge = dfPref #pd.merge(dfAlt,dfPref,on="uri") #dfAlt.merge(dfPref,left_on="uri",right_on="uri")
         return dfAlt,dfPref,dfMerge
     
     def update_graph_subject(self, df:pd.DataFrame):
