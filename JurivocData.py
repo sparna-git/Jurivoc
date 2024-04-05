@@ -144,7 +144,7 @@ class dataset:
         return df
     
     def update_title_block(self,df:pd.DataFrame) -> pd.DataFrame:
-        print('Update block')
+        print('Update dataframe titles...')
         
         data = []
         blockAux = ''
@@ -168,6 +168,7 @@ class dataset:
         return dfUpdate
 
     def update_sn_block(self,df:pd.DataFrame) -> pd.DataFrame:
+        print('Update dataframe SN...')
 
         titlesKey = pd.Series(df['title'].to_list()).drop_duplicates().to_list()
         data = []
