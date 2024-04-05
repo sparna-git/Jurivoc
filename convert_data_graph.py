@@ -155,6 +155,10 @@ class update_graph:
                 uri_new = URIRef(str(uri_current))
                 self.graphNew.add((uri_new,p,o))
                 self.graphNew.set((uri_new,ns_dct.identifier,Literal(uri_new.split('/')[-1])))
+
+                for su,pr,ob in self.graphNew.triples((None,None,s)):
+                    self.graphNew.add((su,pr,uri_new))
+                    self.graphNew.remove((su,pr,s))
             self.graphNew.remove((uri_source,None,None))
         return True
     
