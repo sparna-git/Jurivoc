@@ -5,7 +5,7 @@ from rdflib import Graph, URIRef, Namespace, Literal
 from rdflib.collection import Collection
 from rdflib.term import BNode
 import glob
-#from rdflib.paths import Path, eval_path
+from rdflib.paths import Path, eval_path
 #from nltk.corpus import wordnet as wn
 
 # Declaration Global NAMESPACE
@@ -16,6 +16,7 @@ ns_skos = Namespace("http://www.w3.org/2004/02/skos/core#")
 ns_dct = Namespace("http://purl.org/dc/terms/")
 ns_owl = Namespace("http://www.w3.org/2002/07/owl#")
 ns_madsrdf = Namespace("http://www.loc.gov/mads/rdf/v1#")
+
 
 class update_graph:
 
@@ -58,8 +59,7 @@ class update_graph:
                     # Update identifier
                     self.graphNew.set((newURI,ns_dct.identifier,Literal(newURI.split('/')[-1])))
                 self.graphNew.remove((subject_uri,None,None))
-                
-                
+                                
                 if (None,None,subject_uri) in self.graphNew:
                     for s,p,o in self.graphNew.triples((None,None,subject_uri)):
                         self.graphNew.add((s,p,newURI))
@@ -68,6 +68,111 @@ class update_graph:
                     print("Warning: no triples found with {} as object".format(subject_uri))
             else:
                 print("Warning: no triples found with {} as subject".format(subject_uri))
+        return True
+
+    def get_alt_label(self,subject,g:Graph) -> list:
+
+        list_AltLabel = []
+            
+        listOfAltLabel = list(eval_path(g,
+                                (subject,ns_skos.altLabel,None)
+                                ))
+        [list_AltLabel.append([al[0],al[1]+self.get_lang(al)]) for al in listOfAltLabel]
+
+        return list_AltLabel
+
+    def get_pref_label(self,subject,g:Graph) -> list:
+        
+        prefLabel = []
+        listOfPrefLabel = list(eval_path(g,
+                                (subject,ns_skos.prefLabel,None)
+                                ))
+        [prefLabel.append([al[0],al[1]+self.get_lang(al)]) for al in listOfPrefLabel]
+
+        return prefLabel
+
+    def update_old_new_graph(self):
+
+        # Get all data in the new Graph
+        dfNew = [[s,self.get_alt_label(s,self.graphNew),self.get_pref_label(s,self.graphNew) ] for s,p,o in self.graphNew]
+
+        # Get all data in the Old Graph
+        dfNew = [[s,self.get_alt_label(s,self.graphNew),self.get_pref_label(s,self.graphNew) ] for s,p,o in self.graphNew]
+
+        print(dfNew)
+
+    def get_predicate_altLabe_prefLabel(self, gProcess) -> pd.DataFrame:
+
+        list_AltLabel = []
+        list_PrefLabel = []
+        for s,p,o in gProcess.triples((None,None,ns_skos.Concept)):            
+            
+            listOfAltLabel = list(eval_path(gProcess,
+                                    (s,ns_skos.altLabel,None)
+                                    ))
+            [list_AltLabel.append([al[0],al[1]+self.get_lang(al)]) for al in listOfAltLabel]
+            #test = []
+            #[list_AltLabel.append(self.read_data(l)) for l in listOfAltLabel]
+            #[print("Type Input {} result {}".format(type(l),self.read_data(l))) for l in listOfAltLabel]
+            
+
+            listOfPrefLabel = list(eval_path(gProcess,
+                                    (s,ns_skos.prefLabel,None)
+                                    ))
+            #[list_PrefLabel.append(self.read_data(pl)) for pl in listOfPrefLabel]
+            [list_PrefLabel.append([pl[0],pl[1]+self.get_lang(pl)]) for pl in listOfPrefLabel]
+
+        dfAlt = pd.DataFrame(data=list_AltLabel, columns=['uri','description'])
+        dfPref = pd.DataFrame(data=list_PrefLabel, columns=['uri','description'])
+        # Merge the alt and pref lables in a dataframe only
+        dfMerge = dfAlt + dfPref #pd.merge(dfAlt,dfPref,on="uri") #dfAlt.merge(dfPref,left_on="uri",right_on="uri")
+        return dfAlt,dfPref,dfMerge
+    
+    def update_graph_subject(self, df:pd.DataFrame):
+
+        df.to_csv("match.csv",sep="|",index=False)
+        uriKey = pd.Series(df['uri'].to_list()).drop_duplicates().to_list()
+        # Update Subject
+        for uri_source in uriKey:
+            uriOld = df[df['uri'].isin([uri_source])]['uri_old'].to_list()
+            uniqueURI = pd.Series(uriOld).drop_duplicates().to_list()
+            uri_current = ",".join(uniqueURI)
+            if len(uniqueURI) > 1:
+                print("1")
+                #logging.warning("Error in {} uri with cannot possible 2 uris with the same data {} uris".format(uri_source,",".join(uri_current)))
+            for s,p,o in self.graphNew.triples((uri_source,None,None)):
+                uri_new = URIRef(str(uri_current))
+                self.graphNew.add((uri_new,p,o))
+                self.graphNew.set((uri_new,ns_dct.identifier,Literal(uri_new.split('/')[-1])))
+            self.graphNew.remove((uri_source,None,None))
+        return True
+    
+    def match_uri_update(self,dfNew:pd.DataFrame,dfOld:pd.DataFrame):
+
+        dfMerge = pd.merge(dfNew,dfOld, on=['altLabel','prefLabel'])
+        print(dfMerge)
+
+        self.update_graph_subject(dfMerge)
+
+        return True
+    
+    def compare_graph_get_uri(self) -> Graph:
+        
+        # Get Data value URI, LABELS
+        dfGraphNew_Alt,dfGraphNew_Pref,dfNew = self.get_predicate_altLabe_prefLabel(self.graphNew)
+        dfNew.sort_values(by=["uri"], inplace=True)
+        #dfGraphNew_Alt.to_csv('altLabel_1.csv',sep="|",index=False)
+        #dfGraphNew_Pref.to_csv('prefLabel_1.csv',sep="|",index=False)
+        #dfNew.to_csv('newGraph_1.csv',sep="|",index=False)
+        dfGraphOld_Alt,dfGraphOld_Pref,dfOld = self.get_predicate_altLabe_prefLabel(self.graphCurrent)
+        #dfOld.sort_values(by=["uri"], inplace=True)
+        #dfGraphNew_Alt.to_csv('altLabel_2.csv',sep="|",index=False)
+        #dfGraphNew_Pref.to_csv('prefLabel_2.csv',sep="|",index=False)
+        #dfOld.to_csv('oldGraph.csv',sep="|",index=False)
+
+        # Etape 1 - Matche all URI
+        self.match_uri_update(dfNew,dfOld)
+        
         return True
 
     def update_uri_concepts(self):
@@ -98,15 +203,18 @@ class convert_graph:
 
     def generate_skos_concept(self, df:pd.DataFrame, titlekey:list) -> Graph:
         # Create a Graph
+        
         gConcepts = Graph()
-        for Title in titlekey:
+        key = pd.Series(titlekey).drop('').to_list()
+        for Title in key:
             # get block for each title
             dfFilter = df[df["title"].isin([Title])]
             # find if block contain USE
             block  = dfFilter["block"].to_list()            
             # If bExist is false then generate a skos:Concept
             if 'USE' not in block:
-                # Convert title to URI            
+                # Convert title to URI       
+                print('Title {}'.format(Title) )     
                 title_dq = self.dataquality_text(Title)
                 title_uri = URIRef(ns_jurivoc + title_dq)
                 
@@ -294,6 +402,7 @@ class convert_graph:
 
         pTitle = list(data_input)
         TITLE_URI = ""
+        
         if pTitle[-1] == "_":
             tlist = self.normalize_text_url(pTitle,-1)
             TITLE_URI = ''.join(tlist)        
@@ -324,8 +433,8 @@ class convert_graph:
             dfFilter = df[df["title"].isin([title])]
             #
             blocks = pd.Series(dfFilter["block"].to_list()).drop_duplicates().to_list()
-            if set(['USA','AND']).issubset(blocks):
-                list_tmp.append(dfFilter)
+            if ('USA' in blocks) or ('AND' in blocks):
+                    list_tmp.append(dfFilter)
         
         dfTmp = pd.concat(list_tmp,ignore_index=True)
         dfTmp.reset_index()
@@ -359,22 +468,26 @@ class convert_graph:
                     #logging.info("Graph THÉSAURUS")
                     dfTHESAURUS = df[df["title"] == "THÉSAURUS"]
                     self.generate_Thesaurus(dfTHESAURUS) 
+                    print("Thesaurus")
                     # =================== Graph Skos:Concept
                     #logging.info("Graph skos:Concepts")
                     titleKey_not_Concept = pd.Series(dfSpecific["title"].to_list()).drop_duplicates().to_list()
                     titleKey_not_Concept.append("THÉSAURUS")
+                    
                     dfConcept = df[~df["title"].isin(titleKey_not_Concept)]
+                    
                     dfConcept.to_csv("data_concepts.csv",sep="|",index=False)
                     titlesKeyConcept = pd.Series(dfConcept["title"].to_list()).drop_duplicates().to_list()
                     self.generate_skos_concept(dfConcept,
                                                titlesKeyConcept
                                                )
+                    print("Concepts")
                     # =================== Graph Specific blocks
                     #logging.info("Graph specific USA and AND block")
                     self.generate_madsrdf(dfSpecific,
                                               pd.Series(dfSpecific["title"].to_list()).drop_duplicates().to_list()
                                               )        
-                
+                    print("madsrdf")                
                 if ('jurivoc_ger' in nameFile) or ('jurivoc_ita' in nameFile):
                     #logging.info("Generate - Graph of data: {}".format(nameFile))
                     print('Generate Graph: {}'.format(nameFile))

@@ -15,7 +15,7 @@ if __name__ == '__main__':
     parser.add_argument('--d','--data',help='Path to a input file', required=True,type=pathlib.Path,dest='data')
     parser.add_argument('--o','--output',help='output Graph file directory', required=True,dest='output')
     parser.add_argument('--l','--log',help='Generate output file for each input file',dest='logs')
-    parser.add_argument('--g','--graph',help='Path to a Graph file ',type=pathlib.Path,dest='graph')
+    parser.add_argument('--g','--previousVersion',help='Path to a Graph file ',type=pathlib.Path,dest='previousVersion')
 
 	# Parse args
     args = parser.parse_args()
@@ -32,11 +32,6 @@ if __name__ == '__main__':
     if not isLogsDirectory:
       os .makedirs(args.logs)
       print("The {} directory is created.".format(args.logs))
-
-
-    #if not 
-    #    os.mkdir(args.logs)
-        
 
     print("Step 1. Parsing input files...")
     # #############################################################
@@ -72,19 +67,17 @@ if __name__ == '__main__':
     # Call process
     gOutput = g.graph_process()
     if len(gOutput) > 0:
-        gIntermediare = os.path.join(args.logs,'result.ttl')
+        gIntermediare = os.path.join(args.logs,'jurivoc_with_label_uris.ttl')
         gOutput.serialize(format="ttl", destination= gIntermediare)
     
     # Call update graph class
     s = ''
-    if args.graph:
-        s = args.graph
+    if args.previousVersion:
+        s = args.previousVersion
     else:
         s = ''
     updateURIs_Concepts = update_graph(gOutput,s)
     gOutputResult = updateURIs_Concepts.update_uri_concepts()
-    #gOutputResult.serialize(format="ttl", destination= 'test.ttl')
     if len(gOutputResult) > 0:
-        result = os.path.join(args.output,'result_newgraph.ttl')
+        result = os.path.join(args.output,'jurivvoc.ttl')
         gOutputResult.serialize(format="ttl", destination= result)
-    

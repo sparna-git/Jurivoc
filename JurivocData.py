@@ -54,7 +54,12 @@ class dataset:
                     dftitle_block = self.add_title_block(dfblock)
                     # Preporcessing all 
                     dfUpdateblock = self.update_title_block(dftitle_block)
-                    dfOutput = self.update_sn_block(dfUpdateblock)
+                    dfUpdateblock.to_csv('last.csv',sep='|',index=False)
+                    
+                    dfUpdateUF = self.update_UF_title_block(dfUpdateblock)
+                    dfUpdateSA = self.update_SA_title_block(dfUpdateUF)
+
+                    dfOutput = self.update_sn_block(dfUpdateSA)
 
                     #dfOutput.to_csv('Temp1.csv',sep="|",index=False)
                     dataset.append([filename,dfOutput])
@@ -171,6 +176,101 @@ class dataset:
         dfUpdate = pd.DataFrame(data = data,columns=['level','title','block','title_block'])
         return dfUpdate
 
+    def update_UF_title_block(self,df:pd.DataFrame) -> pd.DataFrame:
+        
+        # Evaluate and update dataframe
+        indexMax = pd.Series(df['level'].squeeze()).index.max()
+        data_duplicate = []
+        data = []
+        auxtitle = ''
+        nextIdx = 0
+        for idx, row in df.iterrows():
+
+            level = row['level']
+            titleH = row['title']
+            block = row['block']
+            titleBlock = row['title_block']
+
+            #print('level {} |title {} | block {} | title {}'.format(level,titleH,block,titleBlock))
+
+
+            # Update title header
+            if idx < indexMax:
+                nextIdx = idx+1
+
+            sTitleBlock = ""
+            if block == 'UF':
+                if titleBlock == auxtitle:
+                    data_duplicate.append([titleH,titleBlock])
+                else:
+                    # find text how title header
+                    dfTmp = df[df['title'].isin([titleBlock])]
+                    if len(dfTmp) > 0:
+                        sTitleBlock = titleBlock                     
+                    else:
+                        # Update title
+                        title_joint = titleBlock + ' ' + df.iloc[nextIdx].at['title_block']
+                        #print('title {} | block {} | title {}'.format(titleH,block,title_joint))
+                        dfTmp2 = df[df['title'].isin([title_joint])]
+                        if len(dfTmp2) > 0:
+                            auxtitle = df.iloc[nextIdx].at['title_block']
+                            sTitleBlock = title_joint
+                        else:
+                            sTitleBlock = titleBlock
+                if len(sTitleBlock) > 0:
+                    data.append([level,titleH,block,sTitleBlock])
+            else:
+                data.append([level,titleH,block,titleBlock])
+        
+        dfOtput = pd.DataFrame(data=data,columns=['level','title','block','title_block'])
+        #dfOtput.to_csv('title_uf.csv',sep='|',index=False)
+        return dfOtput
+
+    def update_SA_title_block(self,df:pd.DataFrame) -> pd.DataFrame:
+        # Evaluate and update dataframe
+        indexMax = pd.Series(df['level'].squeeze()).index.max()
+        data_duplicate = []
+        data = []
+        auxtitle = ''
+        nextIdx = 0
+        for idx, row in df.iterrows():
+
+            level = row['level']
+            titleH = row['title']
+            block = row['block']
+            titleBlock = row['title_block']
+
+            # Update title header
+            if idx < indexMax:
+                nextIdx = idx+1
+
+            sTitleBlock = ""
+            if block == 'SA':
+                if titleBlock == auxtitle:
+                    data_duplicate.append([titleH,titleBlock])
+                else:
+                    # find text how title header
+                    dfTmp = df[df['title'].isin([titleBlock])]
+                    if len(dfTmp) > 0:
+                        sTitleBlock = titleBlock                     
+                    else:
+                        # Update title
+                        title_joint = titleBlock + ' ' + df.iloc[nextIdx].at['title_block']
+                        #print('title {} | block {} | title {}'.format(titleH,block,title_joint))
+                        dfTmp2 = df[df['title'].isin([title_joint])]
+                        if len(dfTmp2) > 0:
+                            auxtitle = df.iloc[nextIdx].at['title_block']
+                            sTitleBlock = title_joint
+                        else:
+                            sTitleBlock = titleBlock
+                if len(sTitleBlock) > 0:
+                    data.append([level,titleH,block,sTitleBlock])
+            else:
+                data.append([level,titleH,block,titleBlock])
+        
+        dfOtput = pd.DataFrame(data=data,columns=['level','title','block','title_block'])
+        return dfOtput
+
     def update_sn_block(self,df:pd.DataFrame) -> pd.DataFrame:
         print('Update dataframe SN...')
 
@@ -208,8 +308,9 @@ class dataset:
         dftitles = self.update_titles(df)
         df_block = self.add_block_column(dftitles)
         df_title = self.add_title_block(df_block)
-        dfLanguage = self.update_title_block(df_title)
-        #dfLanguage.to_csv('update_title_block2.csv',sep="|",index=False)
+        dfUpdateUF = self.update_UF_title_block(df_title)
+        dfUpdateSA = self.update_SA_title_block(dfUpdateUF)
+        dfLanguage = self.update_title_block(dfUpdateSA)
 
         dftmp = dfLanguage[dfLanguage['level'] > 1]
         dfTmp2 = dftmp.reset_index(drop=True)
