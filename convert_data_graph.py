@@ -19,28 +19,23 @@ ns_madsrdf = Namespace("http://www.loc.gov/mads/rdf/v1#")
 
 class update_graph:
 
-    def __init__(self, graphInput : Graph, pathGraph) -> None:
+    def __init__(self, graphInput : Graph, pathGraph : str) -> None:
         self.graphCurrent = Graph()
-        self.graphNew = Graph()
-        self.graphNew.bind("jurivoc",ns_jurivoc)
-
-        # Graph New
         self.graphNew = graphInput
-        
-        
-        gCurrent = Graph()
-        readfiles = []        
-        if pathGraph:
-            dir = os.path.join(pathGraph,"*")
-            for file in glob.glob(dir):
-                readfiles.append(file)
+        self.graphNew.bind("jurivoc",ns_jurivoc)
+        self.directory = pathGraph
 
-        if len(readfiles) > 0:
-            gCurrent.parse([d for d in readfiles])
-            self.graphCurrent += gCurrent
-        else:
-            self.graphCurrent += gCurrent
-                
+        if os.path.exists(pathGraph):
+            if os.path.isfile(pathGraph):
+                self.graphCurrent.parse(pathGraph)
+            else:
+                if os.path.isdir(pathGraph):
+                    for f in os.listdir(pathGraph):
+                        nameFile = f
+                        fileInput = os.path.join(self.directoryFile, f)
+                        if os.path.isfile(fileInput):
+                            self.graphCurrent.parse(pathGraph)
+
     def generate_new_URIS(self) -> Graph:
 
         newURIs = []
@@ -73,10 +68,9 @@ class update_graph:
                     print("Warning: {} Object is not exist in the Graph ".format(subject_uri))
             else:
                 print("Warning: {} Subject is not exist in the Graph ".format(subject_uri))
-        return self.graphNew
+        return True
 
     def update_uri_concepts(self):
-
         if len(self.graphCurrent) > 0:
             # update the UTIS between graph current and new graph
             print("Update graphs with old graph")
@@ -84,8 +78,8 @@ class update_graph:
         else:
             print("Generate new URIs in Skos:Concept")
             # Generate URIS in the Graph Concepts
-            gOutput = self.generate_new_URIS()            
-        return gOutput
+            self.generate_new_URIS()            
+        return self.graphNew
 
 
 class convert_graph:
@@ -219,52 +213,52 @@ class convert_graph:
         print("Save in graph # {} rows".format(len(df)))
 
         gLanguage = Graph()
-        for index,row in df[df['level'] > 1].iterrows():
+        for index,row in df.iterrows():
             title = row["title"]
             title_uri = URIRef(ns_jurivoc + self.dataquality_text(title))
-            idLang = row["block"]
-            lang = ""
-            if idLang == 'ITA':
-                lang='fr'
-
-            if idLang == 'GER':
-                lang='de'
+            idLang = row["language"]
             
-            title_language = row["title_block"]
+            title_language = row["title_traduction"]
 
-            #print('Title: {} Lang: {} titleLang {}'.format(title,title_language,idLang))
-
-            gLanguage.add((title_uri,ns_skos.prefLabel,Literal(title_language, lang=lang)))
+            gLanguage.add((title_uri,ns_skos.prefLabel,Literal(title_language, lang=idLang)))
 
         self.jurivocGraph += gLanguage
         return True
 
     def generate_graph_ger_ita(self,df:pd.DataFrame, nameFile) -> Graph:
 
+        print('Language {}'.format(nameFile))
         # Dataset Languages
         dftranslate = pd.DataFrame()
         for l in self.dataset:
             if "dbLanguage" in l[0]:
                 dftranslate = l[1]
-        
-        print("Test")
-        print(df)
 
-        #Merge
+        if 'jurivoc_ger' in nameFile:
+            keyLanguage = 'de'
+        
+        if 'jurivoc_ita' in nameFile:
+            keyLanguage = 'it'
+        
         #dfLanguage = dftranslate[dftranslate['level'] > 1]
-        dfinner = pd.merge(left=df, right=dftranslate, how='inner', left_on='title', right_on='title_block')
-        print(dfinner)
-        dfinner.columns = ['level','title','block','title_block','title_translate','language','title_language']
+        dfMerge = pd.merge(left=df, right=dftranslate, how='inner', left_on='title', right_on='title_traduction')
+        dfMerge.columns = ['level','title','block','title_block','title_translate','language','title_language']
+        dfTmp = dfMerge[dfMerge['level'] != 1]
+        dfinner = dfTmp.reset_index(drop=True)
+
+        print('Language Filter: {} '.format(keyLanguage))
+        dfDB = dfinner[dfinner['language'].isin([keyLanguage])]
+        #dfDB.to_csv('filter.csv',sep='|',index=False)
 
         #dfinner.to_csv("Merge_traduction.csv",sep="|",index=False)        
         gLanguage = Graph()
 
         # Get all title header
-        titles = dfinner["title_translate"].to_list()
+        titles = dfDB["title_translate"].to_list()
         titlesKey = pd.Series(titles).drop_duplicates().tolist()
         for Title in titlesKey:
             # get block for each title
-            dfFilter = dfinner[dfinner["title_translate"].isin([Title])]
+            dfFilter = dfDB[dfDB["title_translate"].isin([Title])]
             # find if block contain USE
             block  = dfFilter["block"].to_list()
             bFlag = 'USE' in block
@@ -345,12 +339,14 @@ class convert_graph:
             nameFile = source[0]
             df = source[1]
 
+            print('file name: {}'.format(nameFile))
+
             if 'dbLanguage' in nameFile:
                 #logging.info("Generate - Graph of Language {}".format("DB Language"))
                 print("Generate - Graph of Language {}".format("DB Language"))
                 self.generate_language_graph(df)
             else:                
-                if '_fre.txt' in nameFile:
+                if '_fre' in nameFile:
 
                     titlesKey = pd.Series(df["title"].to_list()).drop_duplicates().to_list()
                     
@@ -379,8 +375,9 @@ class convert_graph:
                                               pd.Series(dfSpecific["title"].to_list()).drop_duplicates().to_list()
                                               )        
                 
-                if ('_ger.txt' in nameFile) or ('_ita.txt' in nameFile):
+                if ('jurivoc_ger' in nameFile) or ('jurivoc_ita' in nameFile):
                     #logging.info("Generate - Graph of data: {}".format(nameFile))
+                    print('Generate Graph: {}'.format(nameFile))
                     self.generate_graph_ger_ita(df,nameFile)
         
         return self.jurivocGraph

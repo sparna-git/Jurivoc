@@ -2,6 +2,7 @@ import os
 import pandas as pd
 
 blockS_ID = ["UF","BT","SN","SA","USE","UFA","NT","USA","AND"]
+LANGUAGE_DICT = {"ITA":"it","GER":"de"}
 langID = ['GER','ITA']
 
 class dataset:
@@ -65,6 +66,7 @@ class dataset:
 
     def update_titles(self, df:pd.DataFrame) -> pd.DataFrame:
 
+        print("Update title ...")
         # Evaluate and update dataframe
         indexMax = pd.Series(df['level'].squeeze()).index.max()
         data_duplicate = []
@@ -119,6 +121,7 @@ class dataset:
     
     def add_block_column(self,df:pd.DataFrame) -> pd.DataFrame:
 
+        print("Add block ...")
         # Add block
         df["block"] = df.apply(lambda t : self.get_block(t['level'],t['title']), axis=1)
         return df
@@ -140,12 +143,13 @@ class dataset:
 
     def add_title_block(self,df:pd.DataFrame) -> pd.DataFrame:
 
+        print("Add Title Block ...")
         df["title_block"] = df.apply(lambda t : self.split_title(t['level'],t['block'],t['title']), axis=1)
         return df
     
     def update_title_block(self,df:pd.DataFrame) -> pd.DataFrame:
-        print('Update block')
         
+        print("Update Title Block ...")
         data = []
         blockAux = ''
         titleAux = ''
@@ -204,43 +208,15 @@ class dataset:
         df_block = self.add_block_column(dftitles)
         df_title = self.add_title_block(df_block)
         dfLanguage = self.update_title_block(df_title)
-        dfUpdateblock = self.update_title_block(dfLanguage)
-        dfLanguage.to_csv('update_title_block2.csv',sep="|",index=False)
+        #dfLanguage.to_csv('update_title_block2.csv',sep="|",index=False)
 
-        # Get all title header
-
-        # titlesKey = pd.Series(dfUpdateblock["title"].to_list()).drop_duplicates().to_list()
-        # data = []
-        # for titleFR in titlesKey:
-        #     # Filter set of data
-        #     dfFilter = dfLanguage[dfLanguage["title"].isin([titleFR])]
-        #     dfLanguage = dfFilter.loc[dfFilter["level"] != 1]
-            
-        #     title_lang = ""
-        #     title_lang = " ".join(str(x) for x in dfLanguage["title_block"].to_list())
-
-        #     # Get language
-        #     text = " ".join(title_lang.split())
-        #     idLang = ""
-        #     title_traduction = ""
-        #     try:
-        #         idLang = text.split()[0]
-        #         if idLang in LANGUAGES:
-        #             title_traduction = " ".join(text.split(idLang))
-        #             idLang = LANGUAGE_DICT[idLang]
-        #         else:
-        #             log.error("File: {} Title: {} Cannot found the language: {} ".format(nameFile,titleFR,title_lang))      
-        #     except:
-        #         idLang = ""
-            
-        #     if idLang is None:
-        #         log.error("Cannot found laguage {}".format(title_lang))
-        #     else:
-        #         data.append([titleFR,idLang,title_traduction.lstrip()])
-        #dfLang = pd.DataFrame(data = dfLanguage, columns=["title","language","title_traduction"])
-        #dfLang.to_csv('output_lang.csv',sep="|",index=False) 
-        return dfLanguage
-
+        dftmp = dfLanguage[dfLanguage['level'] > 1]
+        dfTmp2 = dftmp.reset_index(drop=True)
+        dfOutputLanguage = dfTmp2.drop(['level'], axis=1)
+        dfOutput = dfOutputLanguage.rename(columns={"block":"language","title_block":"title_traduction"})
+        
+        dfOutput['language'] = dfOutput['language'].apply([lambda l : LANGUAGE_DICT[l]])
+        return dfOutput
 
     def read_file(self) -> list:
         # Return a list with name of file and dataframe

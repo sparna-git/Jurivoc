@@ -13,7 +13,7 @@ if __name__ == '__main__':
 	)
 	# Add arguments
     parser.add_argument('--d','--data',help='Path to a input file', required=True,type=pathlib.Path,dest='data')
-    parser.add_argument('--o','--output',help='output Graph file directory', required=True,dest='outputFile')
+    parser.add_argument('--o','--output',help='output Graph file directory', required=True,dest='output')
     parser.add_argument('--l','--log',help='Generate output file for each input file',dest='logs')
     parser.add_argument('--g','--graph',help='Path to a Graph file ',type=pathlib.Path,dest='graph')
 
@@ -21,7 +21,22 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     print("Directory Source: {}".format(args.data))
-    print("Directory output: {}".format(args.outputFile))
+    print("Directory output: {}".format(args.output))
+
+    isLogDirectory = os.path.exists(args.output)
+    if not isLogDirectory:
+      os .makedirs(args.output)
+      print("The {} directory is created.".format(args.output))
+
+    isLogsDirectory = os.path.exists(args.logs)
+    if not isLogsDirectory:
+      os .makedirs(args.logs)
+      print("The {} directory is created.".format(args.logs))
+
+
+    #if not 
+    #    os.mkdir(args.logs)
+        
 
     print("Step 1. Parsing input files...")
     # #############################################################
@@ -38,9 +53,6 @@ if __name__ == '__main__':
     
     # create Log folder
     print("Step 1.1 Generate log output files of dataframes...")
-    if not os.path.exists(args.logs):
-        os.mkdir(args.logs)
-    
     for l in ds:
         #print(l)
         file = os.path.join(args.logs,l[0]+'.csv')
@@ -64,9 +76,15 @@ if __name__ == '__main__':
         gOutput.serialize(format="ttl", destination= gIntermediare)
     
     # Call update graph class
-    if args.graph :
-        updateURIs_Concepts = update_graph(gOutput,args.graph)
-        gOutputResult = updateURIs_Concepts.update_uri_concepts()
-        if len(gOutputResult) > 0:
-            result = os.path.join(args.outputFile,'result.ttl')
-            gOutputResult.serialize(format="ttl", destination= result)
+    s = ''
+    if args.graph:
+        s = args.graph
+    else:
+        s = ''
+    updateURIs_Concepts = update_graph(gOutput,s)
+    gOutputResult = updateURIs_Concepts.update_uri_concepts()
+    #gOutputResult.serialize(format="ttl", destination= 'test.ttl')
+    if len(gOutputResult) > 0:
+        result = os.path.join(args.output,'result_newgraph.ttl')
+        gOutputResult.serialize(format="ttl", destination= result)
+    
