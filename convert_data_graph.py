@@ -481,11 +481,14 @@ class convert_graph:
             data_input = data_input.replace(old,new)
 
         pTitle = list(data_input)
-        TITLE_URI = ""        
-        if pTitle[-1] == "_":
+        TITLE_URI = ""  
+        if (len(pTitle) == 0):
+            print("pTitle empty for "+title)  
+
+        if ((len(pTitle) > 0) and pTitle[-1] == "_"):
             tlist = self.normalize_text_url(pTitle,-1)
             TITLE_URI = ''.join(tlist)        
-        elif pTitle[0] == "_":
+        elif ((len(pTitle) > 0) and pTitle[0] == "_"):
             tlist = self.normalize_text_url(pTitle,0)
             TITLE_URI = ''.join(tlist)
         else:
