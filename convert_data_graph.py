@@ -4,8 +4,8 @@ import numpy as np
 from rdflib import Graph, URIRef, Namespace, Literal
 from rdflib.collection import Collection
 from rdflib.term import BNode
-import glob
 from rdflib.paths import Path, eval_path
+from rdflib.term import BNode
 #from nltk.corpus import wordnet as wn
 
 # Declaration Global NAMESPACE
@@ -16,6 +16,41 @@ ns_skos = Namespace("http://www.w3.org/2004/02/skos/core#")
 ns_dct = Namespace("http://purl.org/dc/terms/")
 ns_owl = Namespace("http://www.w3.org/2002/07/owl#")
 ns_madsrdf = Namespace("http://www.loc.gov/mads/rdf/v1#")
+
+def dataquality_text(title:str):
+
+    data_input = title.upper()
+    replace_dict = {"(":"_",")":"_","[":"_","]": "_","'":"_","\"":"_"," ":"_","-":"_","Ï":"_","¿":"_","½":"_","É":"E","È":"E","Ê":"E","À":"A","Â":"A","Ô":"O",".":"_",",":"_","Û":"U","Î":"I","Ç":"C","/":"_","&":"_"}
+
+    #1. supprimer tous les caractères spéciaux, parenthèses, crochets, apostrophes, etc. : 
+    #   les remplacer par “_”, garder seulement les lettres et les digits
+    for old,new in replace_dict.items():
+        data_input = data_input.replace(old,new)
+
+    pTitle = list(data_input)
+    TITLE_URI = ""        
+    if pTitle[-1] == "_":
+        tlist = normalize_text_url(pTitle,-1)
+        TITLE_URI = ''.join(tlist)        
+    elif pTitle[0] == "_":
+        tlist = normalize_text_url(pTitle,0)
+        TITLE_URI = ''.join(tlist)
+    else:
+        TITLE_URI = data_input
+
+    return TITLE_URI
+
+def normalize_text_url(split_title : list,ind : int):
+
+    if split_title[ind] != "_":
+        return split_title
+    else:
+        if ind == -1:
+            split_title.pop((len(split_title)-1))
+        if ind == 0:
+            split_title.pop(0)
+        normalize_text_url(split_title,ind)
+    return split_title
 
 
 class update_graph:
@@ -81,24 +116,44 @@ class update_graph:
 
     def generate_new_uri_ComplexSubject(self):
 
+        componentList_ID = []
+        data = []
+
         for s,p,o in self.graphNew.triples((None,None,ns_madsrdf.ComplexSubject)):
-
-            uris_jurivoc = list(eval_path(
-                self.graphNew,
-                (
-                    None,ns_madsrdf.componentList,None
+            for ss,pp,oo in self.graphNew.triples((s,ns_madsrdf.componentList,None)):
+                # Get values data in a Blank Node
+                l = list(
+                    eval_path(
+                        self.graphNew,
+                        (oo,
+                         ns_rdf.rest / ns_rdf.first,
+                         None)
+                    )
                 )
-            ))
+                c = Collection(self.graphNew,oo)
+                [data.append([s,l.split('/')[-1]]) for l in c]                
+            
+        dfComplex = pd.DataFrame(data=data, columns = ['uri','componentList'])
+        dfProcess = dfComplex.groupby(['uri'])['componentList'].apply('_'.join).reset_index()
+        dfProcess.sort_values(by='uri',inplace=True)
+        dfProcess.reset_index(drop=True, inplace=True)
+        dfProcess['IDseq'] = [str(idx+1) for idx,row in dfProcess.iterrows()]
+        #dfProcess.to_csv('componentID.csv',sep='|',index=False)
 
-            componentList_ID = []
-            for uris in uris_jurivoc:
-                s = uris[0]
-                o = uris[1]
-                print('Subject {}| Object {}|data {} '.format(s,o,uris))
-                componentList_ID.append(o)
-
-                
-
+        # Update URI
+        for idx,row in dfProcess.iterrows():
+            subject = row['uri']
+            newIdSeq = row['IDseq']+'_'+row['componentList']
+            newURI  = URIRef(ns_jurivoc+newIdSeq)
+            
+            for s,p,o in self.graphNew.triples((subject,None,None)):                            
+                self.graphNew.add((newURI,p,o))
+                for ss,pp,oo in self.graphNew.triples((None,None,subject)):
+                    self.graphNew.add((ss,pp,newURI))
+                self.graphNew.remove((None,None,subject))
+            self.graphNew.remove((subject,None,None))
+        return True
+    
     def get_lang(self, text) -> str:
         language = ""
         # language
@@ -211,41 +266,6 @@ class update_graph:
 
         return True
     
-    def dataquality_text(self, title:str):
-
-        data_input = title.upper()
-        replace_dict = {"(":"_",")":"_","[":"_","]": "_","'":"_","\"":"_"," ":"_","-":"_","Ï":"_","¿":"_","½":"_","É":"E","È":"E","Ê":"E","À":"A","Â":"A","Ô":"O",".":"_",",":"_","Û":"U","Î":"I","Ç":"C","/":"_"}
-
-        #1. supprimer tous les caractères spéciaux, parenthèses, crochets, apostrophes, etc. : 
-        #   les remplacer par “_”, garder seulement les lettres et les digits
-        for old,new in replace_dict.items():
-            data_input = data_input.replace(old,new)
-
-        pTitle = list(data_input)
-        TITLE_URI = ""        
-        if pTitle[-1] == "_":
-            tlist = self.normalize_text_url(pTitle,-1)
-            TITLE_URI = ''.join(tlist)        
-        elif pTitle[0] == "_":
-            tlist = self.normalize_text_url(pTitle,0)
-            TITLE_URI = ''.join(tlist)
-        else:
-            TITLE_URI = data_input
-
-        return TITLE_URI
-
-    def normalize_text_url(self, split_title : list,ind : int):
-
-        if split_title[ind] != "_":
-            return split_title
-        else:
-            if ind == -1:
-                split_title.pop((len(split_title)-1))
-            if ind == 0:
-                split_title.pop(0)
-            self.normalize_text_url(split_title,ind)
-        return split_title
-
     def compare_graph_get_uri(self) -> Graph:
         
         # Get Data value URI, LABELS
@@ -268,7 +288,7 @@ class update_graph:
             print("Generate new URIs in Skos:Concept")
             # Generate URIS in the Graph Concepts
             self.generate_new_URIS()
-            #self.generate_new_uri_ComplexSubject()
+            self.generate_new_uri_ComplexSubject()
         return self.graphNew
 
 
@@ -308,7 +328,7 @@ class convert_graph:
             # If bExist is false then generate a skos:Concept
             if 'USE' not in block:
                 # Convert title to URI
-                title_dq = self.dataquality_text(Title)
+                title_dq = dataquality_text(Title)
                 title_uri = URIRef(ns_jurivoc + title_dq)
                 
                 # Create skos:Concept Graph
@@ -333,9 +353,9 @@ class convert_graph:
                                 gConcepts.add((URIRef("https://fedlex.data.admin.ch/vocabulary/jurivoc"),ns_skos.hasTopConcept,title_uri))
                             else:
                                 if title_block not in titleWithUSE:
-                                    gConcepts.add((title_uri,ns_skos.broader,URIRef(ns_jurivoc + self.dataquality_text(title_block))))
+                                    gConcepts.add((title_uri,ns_skos.broader,URIRef(ns_jurivoc + dataquality_text(title_block))))
                                     # Inverse to skos:broader
-                                    gConcepts.add((URIRef(ns_jurivoc + self.dataquality_text(title_block)),ns_skos.narrower,title_uri))
+                                    gConcepts.add((URIRef(ns_jurivoc + dataquality_text(title_block)),ns_skos.narrower,title_uri))
 
                         # Generate skos:scopeNote
                         if block == "SN":
@@ -343,8 +363,8 @@ class convert_graph:
 
                         if block == "SA":
                             if title_block not in titleWithUSE:
-                                gConcepts.add((title_uri,ns_skos.related,URIRef(ns_jurivoc + self.dataquality_text(title_block))))
-                                gConcepts.add((URIRef(ns_jurivoc + self.dataquality_text(title_block)),ns_skos.related,title_uri))
+                                gConcepts.add((title_uri,ns_skos.related,URIRef(ns_jurivoc + dataquality_text(title_block))))
+                                gConcepts.add((URIRef(ns_jurivoc + dataquality_text(title_block)),ns_skos.related,title_uri))
             
         self.jurivocGraph += gConcepts
         return True
@@ -382,7 +402,7 @@ class convert_graph:
 
             blocks = pd.Series(dfTitle["title"].to_list()).drop_duplicates().to_list()
             if "USE" not in blocks:
-                title_dq = self.dataquality_text(title)
+                title_dq = dataquality_text(title)
                 title_uri = URIRef(ns_jurivoc+title_dq)
 
                 gSpecific.add((title_uri,ns_rdf.type,URIRef(ns_madsrdf.ComplexSubject)))
@@ -392,14 +412,14 @@ class convert_graph:
                 for idx, row in dfTitle.iterrows():
 
                     if row["block"] == "USA":
-                        titleBlock = self.dataquality_text(row["title_block"])
+                        titleBlock = dataquality_text(row["title_block"])
                         uriComponent = URIRef(ns_jurivoc+titleBlock)
                         datacomponentList.append(uriComponent)
                         #
                         gSpecific.add((uriComponent,ns_rdfs.seeAlso,title_uri))
                     
                     if row["block"] == "AND":
-                        titleBlock = self.dataquality_text(row["title_block"])
+                        titleBlock = dataquality_text(row["title_block"])
                         uriComponent = URIRef(ns_jurivoc+titleBlock)
                         datacomponentList.append(uriComponent)
                         #
@@ -408,7 +428,7 @@ class convert_graph:
                 if len(datacomponentList) > 0:
                     nodeList = BNode()
                     gSpecific.add((title_uri,ns_madsrdf.componentList,nodeList))
-                    Collection(gSpecific,nodeList,datacomponentList)                
+                    Collection(gSpecific,nodeList,datacomponentList)           
             else:
                 print("Warning: the {} title contain a block USE".format(title))
                 log_df.append([dfTitle])
@@ -424,7 +444,7 @@ class convert_graph:
         terms = []
         for index,row in df.iterrows():
             title = row["title"]
-            title_uri = URIRef(ns_jurivoc + self.dataquality_text(title))
+            title_uri = URIRef(ns_jurivoc + dataquality_text(title))
             idLang = row["language"]
             
             title_language = row["title_traduction"]
@@ -477,7 +497,7 @@ class convert_graph:
             block  = dfFilter["block"].to_list()
             bFlag = 'USE' in block
             if bFlag == False:
-                title_uri = URIRef(ns_jurivoc + self.dataquality_text(Title))
+                title_uri = URIRef(ns_jurivoc + dataquality_text(Title))
                 title_lang = dfFilter["title"].unique()[0]
                 idLang = dfFilter["language"].unique()[0]
 
@@ -496,42 +516,7 @@ class convert_graph:
         
         self.jurivocGraph += gLanguage
         return True
-        
-    def dataquality_text(self, title:str):
-
-        data_input = title.upper()
-        replace_dict = {"(":"_",")":"_","[":"_","]": "_","'":"_","\"":"_"," ":"_","Ï":"_","¿":"_","½":"_","É":"E","È":"E","Ê":"E","À":"A","Â":"A","Ô":"O",".":"_",",":"_","Û":"U","Î":"I","Ç":"C","/":"_"}
-
-        #1. supprimer tous les caractères spéciaux, parenthèses, crochets, apostrophes, etc. : 
-        #   les remplacer par “_”, garder seulement les lettres et les digits
-        for old,new in replace_dict.items():
-            data_input = data_input.replace(old,new)
-
-        pTitle = list(data_input)
-        TITLE_URI = ""        
-        if pTitle[-1] == "_":
-            tlist = self.normalize_text_url(pTitle,-1)
-            TITLE_URI = ''.join(tlist)        
-        elif pTitle[0] == "_":
-            tlist = self.normalize_text_url(pTitle,0)
-            TITLE_URI = ''.join(tlist)
-        else:
-            TITLE_URI = data_input
-
-        return TITLE_URI
-
-    def normalize_text_url(self, split_title : list,ind : int):
-
-        if split_title[ind] != "_":
-            return split_title
-        else:
-            if ind == -1:
-                split_title.pop((len(split_title)-1))
-            if ind == 0:
-                split_title.pop(0)
-            self.normalize_text_url(split_title,ind)
-        return split_title
-
+    
     def graph_process(self)-> Graph:
 
         # read dataset
