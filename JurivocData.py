@@ -43,7 +43,6 @@ class dataset:
                 print("File: {}".format(filename))
                 if "_fre_" in filename:
                     # Update df for language
-                    dfGetStructure.to_csv('language.csv',sep="|",index=False)
                     source_language.append(self.language_processing(df, filename))
                 else:
                     # Preprocessing 

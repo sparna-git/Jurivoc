@@ -124,7 +124,6 @@ class update_graph:
 
         componentList_ID = []
         data = []
-
         for s,p,o in self.graphNew.triples((None,None,ns_madsrdf.ComplexSubject)):
             for ss,pp,oo in self.graphNew.triples((s,ns_madsrdf.componentList,None)):
                 # Get values data in a Blank Node
@@ -144,12 +143,8 @@ class update_graph:
         dfProcess.sort_values(by='uri',inplace=True)
         dfProcess.reset_index(drop=True, inplace=True)
         
-        print(dfProcess)
-        
-        
         dfProcess['IDseq'] = [str(idx+1) for idx,row in dfProcess.iterrows()]
-        dfProcess.to_csv('componentID.csv',sep='|',index=False)
-
+        
         # Update URI
         for idx,row in dfProcess.iterrows():
             subject = row['uri']
@@ -383,6 +378,16 @@ class convert_graph:
         self.jurivocGraph.bind("owl",ns_owl)
         self.jurivocGraph.bind("owl",ns_owl)
 
+        #
+        for s in self.dataset:
+            if '_fre' in s[0]:
+                dfFR = s[1]
+                dfTmp = dfFR[dfFR['block'].isin(['USA','AND'])]
+                keyTmp = pd.Series(dfTmp['title'].to_list()).drop_duplicates().to_list()
+                keyTmp.append("THÉSAURUS")
+                dfConceptTitle = dfFR[~dfFR["title"].isin(keyTmp)]
+                self.listOfTitleConcept = pd.Series(dfConceptTitle['title'].to_list()).drop_duplicates().to_list()
+
     def generate_skos_concept(self, df:pd.DataFrame, titlekey:list,titleWithUSE:list) -> Graph:
         # Create a Graph
         
@@ -597,24 +602,15 @@ class convert_graph:
             print('file name: {}'.format(nameFile))
 
             if 'dbLanguage' in nameFile:
-                
-                # Get data in FR
-                dfFR = pd.DataFrame()
-                for s in self.dataset:
-                    if '_fre' in s[0]:
-                        dfFR = s[1]
-                ConceptKey = pd.Series(dfFR['title'].to_list()).drop_duplicates().to_list()
-
                 #logging.info("Generate - Graph of Language {}".format("DB Language"))
                 print("Generate - Graph of Language {}".format("DB Language"))
-                self.generate_language_graph(df, ConceptKey)
+                self.generate_language_graph(df, self.listOfTitleConcept)
             else:                
                 if '_fre' in nameFile:
 
                     # dataframe with USE
                     dfUSETmp = df[df['block'] == 'USE']
                     titleWithUSE = pd.Series(dfUSETmp['title'].to_list()).drop_duplicates().to_list()
-
 
                     # USA and AND block specific Data
                     dfTmp = df[df['block'].isin(['USA','AND'])]
@@ -624,23 +620,14 @@ class convert_graph:
                     
                     #logging.info("Graph of data: {} # rows {}".format(nameFile, len(df)))
                     # =================== Graph THÉSAURUS
-                    #logging.info("Graph THÉSAURUS")
                     dfTHESAURUS = df[df["title"] == "THÉSAURUS"]
                     dfTHESAURUS.to_csv(os.path.join(self.logs,"thesaurus_graph.csv"),sep="|",index=False)
                     self.generate_Thesaurus(dfTHESAURUS) 
                     
                     # =================== Graph Skos:Concept
-                    #logging.info("Graph skos:Concepts")
-                    
-                    titleKey_not_Concept = pd.Series(dfSpecific["title"].to_list()).drop_duplicates().to_list()
-                    titleKey_not_Concept.append("THÉSAURUS")
-                    
-                    #Filter                    
-                    dfConcept = df[~df["title"].isin(titleKey_not_Concept)]                    
+                    dfConcept = df[df["title"].isin(self.listOfTitleConcept)]                 
                     dfConcept.to_csv(os.path.join(self.logs,"concepts_graph.csv"),sep="|",index=False)
-                    titlesKeyConcept = pd.Series(dfConcept["title"].to_list()).drop_duplicates().to_list()
-                    self.listOfTitleConcept = titlesKeyConcept
-                    self.generate_skos_concept(dfConcept,titlesKeyConcept, titleWithUSE)
+                    self.generate_skos_concept(dfConcept,self.listOfTitleConcept, titleWithUSE)
 
                     # =================== Graph Specific blocks
                     #logging.info("Graph specific USA and AND block")
@@ -659,6 +646,7 @@ class convert_graph:
                     filecsv = nameFile+'_graph.csv'
                     dfProcess.to_csv(os.path.join(self.logs,filecsv),sep="|",index=False)
                     print('Generate Graph: {}'.format(nameFile))
+
                     self.generate_graph_ger_ita(dfProcess,nameFile, self.listOfTitleConcept)
         
         return self.jurivocGraph
