@@ -86,6 +86,8 @@ The parameters are the following:
 
 ## Notes on URI
 
+### Concepts URI
+
 The URI generation works in 2 steps :
 
 1. In the first step, URIs are given based on the French labels. e.g. `jurivoc:PUBLICATION_ELECTRONIQUE`. The SKOS thesaurus with these URIs is logged into `<log directory>/jurivoc_with_label_uris.ttl`
@@ -96,6 +98,8 @@ The URI generation works in 2 steps :
     - If no prefLabel matched, a new URI based on the sequential identifier will be given to the concept 
 
 The mapping table between the URIs of the first step, and the corresponding URI found in the previous version is in `jurivoc_log/data_for_graph/Merge_GraphNew_OldGraph.csv`.
+
+### ComplexSubject URI
 
 The URIs for the `ComplexSubject` (USA / AND blocks in the original file) is always created based on:
 - The concatenation of the URI of the Concepts composing the composite synonym
@@ -110,6 +114,10 @@ jurivoc:1_1415_4875_8192 a madsrdf:ComplexSubject ;
 ```
 
 this implies that, in the case when 1/ multiple composite synonyms are associated to the same set of concepts and 2/ one of them is changed and it changes its alphabetical order, then its URI will change.
+
+### Testing the URI matching behavior with the previous version
+
+The repository contains 2 directories that contain a tiny sample of Jurivoc entries : `inputs_small` and `inputs_small_v2`. The "inputs_small_v2" folder contains some modifications compared to the "inputs_small" and this can be used to easily test the behavior when new entries are being added or renamed.
 
 
 ## Notes
