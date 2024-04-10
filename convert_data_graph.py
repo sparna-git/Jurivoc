@@ -6,7 +6,7 @@ from rdflib.collection import Collection
 from rdflib.term import BNode
 from rdflib.paths import Path, eval_path
 from rdflib.term import BNode
-from nltk.corpus import wordnet as wn
+#from nltk.corpus import wordnet as wn
 
 # Declaration Global NAMESPACE
 ns_jurivoc = Namespace("https://fedlex.data.admin.ch/vocabulary/jurivoc/")
