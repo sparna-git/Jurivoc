@@ -149,10 +149,10 @@ class update_graph:
             if len(dfF) == 1:
                 l.append(dfF)
             else:
-                dfF.sort_values(by='uri',inplace=True)
+                dfUri = dfF.sort_values(by='uri') #.sort_values(by='uri')
                 tmp = []
                 nSeq = 1
-                for idx,row in dfF.iterrows():
+                for idx,row in dfUri.iterrows():
                     uri = row['uri']
                     idseq = str(nSeq)+'_'+row['componentList']
                     nSeq += 1
