@@ -1,4 +1,4 @@
- GELDSPIEL
+ GELDSPIEL V2
    BT   SPIEL
    SN   Tradcution de JEU D'ARGENT
 

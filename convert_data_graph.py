@@ -529,7 +529,7 @@ class convert_graph:
                 else:
                     terms.append(title)
         dfNotIdentifier = df[df['title'].isin(terms)]
-        dfNotIdentifier.to_csv(os.path.join(self.logs,"terms_not_identifier.csv"),sep="|",index=False)
+        dfNotIdentifier.to_csv(os.path.join(self.logs,"terms_in_ger_ita_not_found_in_fra.csv"),sep="|",index=False)
         self.jurivocGraph += gLanguage
         return True
 
