@@ -6,7 +6,7 @@ from rdflib.collection import Collection
 from rdflib.term import BNode
 from rdflib.paths import Path, eval_path
 from rdflib.term import BNode
-#from nltk.corpus import wordnet as wn
+from nltk.corpus import wordnet as wn
 
 # Declaration Global NAMESPACE
 ns_jurivoc = Namespace("https://fedlex.data.admin.ch/vocabulary/jurivoc/")
@@ -68,8 +68,7 @@ class update_graph:
         else:    
             self.logs = dir_data_for_graph
 
-        self.directory = pathGraph
-     
+        self.directory = pathGraph     
         if os.path.exists(pathGraph):
             if os.path.isfile(pathGraph):
                 self.graphCurrent.parse(pathGraph)
@@ -78,8 +77,15 @@ class update_graph:
                     for f in os.listdir(pathGraph):
                         fileInput = os.path.join(pathGraph, f)
                         if os.path.isfile(fileInput):
-
                             self.graphCurrent.parse(fileInput)
+            # Get Id Concept
+            nSeq = []
+            [nSeq.append(s.split('/')[-1]) for s,p,o in self.graphCurrent.triples((None,None,ns_skos.Concept))]
+            self.IdSeq = nSeq
+            # Get Id ComplexSubject
+            ComplexSubjectURI = []
+            [ComplexSubjectURI.append(s.split('/')[-1].split('_')[0]) for s,p,o in self.graphCurrent.triples((None,None,ns_madsrdf.ComplexSubject))]
+            self.ComplexSubjectID = ComplexSubjectURI
 
     def generate_new_URIS(self) -> Graph:
 
@@ -137,8 +143,12 @@ class update_graph:
         dfProcess = dfComplex.groupby(['uri'])['componentList'].apply('_'.join).reset_index()
         dfProcess.sort_values(by='uri',inplace=True)
         dfProcess.reset_index(drop=True, inplace=True)
+        
+        print(dfProcess)
+        
+        
         dfProcess['IDseq'] = [str(idx+1) for idx,row in dfProcess.iterrows()]
-        #dfProcess.to_csv('componentID.csv',sep='|',index=False)
+        dfProcess.to_csv('componentID.csv',sep='|',index=False)
 
         # Update URI
         for idx,row in dfProcess.iterrows():
@@ -166,117 +176,176 @@ class update_graph:
             language = ""
         return language
     
-    def update_old_new_graph(self):
+    def get_prefLabel(self, gProcess) -> pd.DataFrame:
 
-        # Get all data in the new Graph
-        dfNew = [[s,self.get_alt_label(s,self.graphNew),self.get_pref_label(s,self.graphNew) ] for s,p,o in self.graphNew]
-
-        # Get all data in the Old Graph
-        dfNew = [[s,self.get_alt_label(s,self.graphNew),self.get_pref_label(s,self.graphNew) ] for s,p,o in self.graphNew]
-
-    def get_predicate_altLabe_prefLabel(self, gProcess) -> pd.DataFrame:
-
-        list_AltLabel = []
         list_PrefLabel = []
         for s,p,o in gProcess.triples((None,None,ns_skos.Concept)):            
-            
-            listOfAltLabel = list(eval_path(gProcess,
-                                    (s,ns_skos.altLabel,None)
-                                    ))
-            [list_AltLabel.append([al[0],al[1]+self.get_lang(al)]) for al in listOfAltLabel]
-            #test = []
-            #[list_AltLabel.append(self.read_data(l)) for l in listOfAltLabel]
-            #[print("Type Input {} result {}".format(type(l),self.read_data(l))) for l in listOfAltLabel]
             
             listOfPrefLabel = list(eval_path(gProcess,
                                     (s,ns_skos.prefLabel,None)
                                     ))
-            #[list_PrefLabel.append(self.read_data(pl)) for pl in listOfPrefLabel]
             [list_PrefLabel.append([pl[0],pl[1]+self.get_lang(pl)]) for pl in listOfPrefLabel]
 
-        dfAlt = pd.DataFrame(data=list_AltLabel, columns=['uri','description'])
-        dfPref = pd.DataFrame(data=list_PrefLabel, columns=['uri','description'])
-        # Merge the alt and pref lables in a dataframe only
-        dfMerge = dfPref #pd.merge(dfAlt,dfPref,on="uri") #dfAlt.merge(dfPref,left_on="uri",right_on="uri")
-        return dfAlt,dfPref,dfMerge
+        dfPref = pd.DataFrame(data=list_PrefLabel, columns=['uri','prefLabel'])
+        return dfPref
     
-    def update_graph_subject(self, df:pd.DataFrame):
+    def get_authoritativeLabel(self,gProcess) -> pd.DataFrame:
 
-        #df.to_csv("match.csv",sep="|",index=False)
-        uriKey = pd.Series(df['uri'].to_list()).drop_duplicates().to_list()
-        # Update Subject
-        for uri_source in uriKey:
-            uriOld = df[df['uri'].isin([uri_source])]['uri_old'].to_list()
-            uniqueURI = pd.Series(uriOld).drop_duplicates().to_list()
-            uri_current = ",".join(uniqueURI)
-            if len(uniqueURI) > 1:
-                print("1")
-                #logging.warning("Error in {} uri with cannot possible 2 uris with the same data {} uris".format(uri_source,",".join(uri_current)))
-            for s,p,o in self.graphNew.triples((uri_source,None,None)):
-                uri_new = URIRef(str(uri_current))
-                self.graphNew.add((uri_new,p,o))
-                self.graphNew.set((uri_new,ns_dct.identifier,Literal(uri_new.split('/')[-1])))
+        list_Label = []
+        for s,p,o in gProcess.triples((None,None,ns_madsrdf.ComplexSubject)):            
+            
+            list_ALabel = list(eval_path(gProcess,
+                                    (s,ns_madsrdf.authoritativeLabel,None)
+                                    ))
+            [list_Label.append([pl[0],pl[1]+self.get_lang(pl)]) for pl in list_ALabel]
 
-                for su,pr,ob in self.graphNew.triples((None,None,s)):
-                    self.graphNew.add((su,pr,uri_new))
-                    self.graphNew.remove((su,pr,s))
-            self.graphNew.remove((uri_source,None,None))
-        return True
+        dfALabel = pd.DataFrame(data=list_Label, columns=['uri','authoritativeLabel'])
+        return dfALabel
     
-    def add_new_concept_graph(self, df:pd.DataFrame):
+    def update_graph_concept(self,uri,uriOld):
 
-        print('Add new concept')
-        nSeq = []
-        uriKey = pd.Series(df['uri'].to_list()).drop_duplicates().to_list()
-        print(uriKey)
-        [nSeq.append(s.split('/')[-1]) for s,p,o in self.graphCurrent.triples((None,None,ns_skos.Concept))]
-        nMAxOld = pd.Series(nSeq).max()
-        # Update Subject
-        for uri_source in uriKey:
-            print(uri_source)
-            # get block for each title
-            dfFilter = df[df["uri"].isin([uri_source])]
-            print(dfFilter)
-            
-            nMAxSequence = int(nMAxOld) + 1 
+        for s,p,o in self.graphNew.triples((uri,None,None)):
+            self.graphNew.add((uriOld,p,o))
+            self.graphNew.set((uriOld,ns_dct.identifier,Literal(uriOld.split('/')[-1])))
+        self.graphNew.remove((uri,None,None))
 
-            print('Generate concept')
-            
-            if (uri_source,None,None) in self.graphNew:
-                uri = URIRef(ns_jurivoc+str(nMAxSequence))
-                for s,p,o in self.graphNew.triples((uri_source,None,None)):
-                    self.graphNew.add((uri,p,o))
-                    self.graphNew.set((uri,ns_dct.identifier,Literal(str(nMAxSequence))))
-
-                self.graphNew.remove((uri_source,None,None))
-        return True
-
-    def match_uri_update(self,dfNew:pd.DataFrame,dfOld:pd.DataFrame):
-
-        dfMerge = pd.merge(dfNew,dfOld,how='left',on=['description'])
-        dfUpdate = dfMerge.rename({'uri_x': 'uri', 'uri_y': 'uri_old'}, axis='columns')
+        for sObj,pObj,oObj in self.graphNew.triples((None,None,uri)):
+            self.graphNew.add((sObj,pObj,uriOld))
+        self.graphNew.remove((None,None,uri))
         
-        dfMatch = dfUpdate[~dfUpdate['uri_old'].isnull()]
-        self.update_graph_subject(dfMatch)
-        dfMatch.to_csv(os.path.join(self.logs,'match.csv'),sep='|',index=False)
+        return True        
 
-        dfNew = dfUpdate[dfUpdate['uri_old'].isnull()]
-        self.add_new_concept_graph(dfNew)
-        dfNew.to_csv(os.path.join(self.logs,'newConcepts.csv'),sep='|',index=False)
+    def update_graph_ComplexSubject(self,uri,uriOld):
+
+        for s,p,o in self.graphNew.triples((uri,None,None)):
+            self.graphNew.add((uriOld,p,o))
+        self.graphNew.remove((uri,None,None))
+
+        for sObj,pObj,oObj in self.graphNew.triples((None,None,uri)):
+            self.graphNew.add((sObj,pObj,uriOld))
+        self.graphNew.remove((None,None,uri))
 
         return True
+
+    def add_new_concept_graph(self,subject):
+
+        # Update Subject
+        id = pd.Series(self.IdSeq).max()
+        nMAxSequence = int(id) + 1
+        uri = URIRef(ns_jurivoc+str(nMAxSequence))
+
+        for s,p,o in self.graphNew.triples((subject,None,None)):
+            self.graphNew.add((uri,p,o))
+            self.graphNew.set((uri,ns_dct.identifier,Literal(str(nMAxSequence))))
+        self.graphNew.remove((subject,None,None))
+
+        for s,p,o in self.graphNew.triples((None,None,subject)):
+            self.graphNew.add((s,p,uri))
+        self.graphNew.remove((None,None,subject))
+
+        self.IdSeq.append(nMAxSequence)
+
+        return True
+
+    def add_new_ComplexSubject_graph(self,subject):
+
+        # Update Subject
+        csId = pd.Series(self.ComplexSubjectID).max()
+        getId = int(csId.split('_')[0]) + 1
+        newUri = URIRef(ns_madsrdf+str(getId))
+        for s,p,o in self.graphNew.triples((subject,None,None)):
+            self.graphNew.add((newUri,p,o))
+        self.graphNew.remove((subject,None,None))
+
+        for sObj,pObj,oObj in self.graphNew.triples((None,None,subject)):
+            self.graphNew.add((sObj,pObj,newUri))
+        self.graphNew.remove((None,None,subject))
+
+        return True
+
+    def process_graph_concept(self,dfNew:pd.DataFrame,dfOld:pd.DataFrame):
+
+        dfMerge = pd.merge(dfNew,dfOld,how='left',on=['prefLabel'])
+        dfData = dfMerge.rename({'uri_x': 'uri', 'uri_y': 'uri_old'}, axis='columns')
+        dfData.to_csv(os.path.join(self.logs,'Merge_GraphNew_OldGraph.csv'),sep='|',index=False)
+
+        titlesKey = pd.Series(dfData['uri'].to_list()).drop_duplicates().to_list()
+        for title in titlesKey:
+            # Filter for title
+            dfW = dfData[dfData['uri'] == title]
+
+            nUri = len(dfW[~dfW['uri'].isna()])
+            nOldUri = len(dfW[~dfW['uri_old'].isna()])
+
+            if nUri == nOldUri:
+                # Match all prefLabel
+                uriOld = pd.Series(dfW['uri_old'].to_list()).drop_duplicates().to_list()
+                if len(uriOld) == 1:
+                    newURI = URIRef(str(uriOld[0]))
+                    self.update_graph_concept(URIRef(title),newURI)
+            else: 
+                # If new uri not exis in the current graph                
+                if nOldUri == 0:
+                    # If uri not exist in Graph, generate new Concept
+                    if (URIRef(title),None,None) not in self.graphCurrent:
+                        # Add new Concept in the graph
+                        self.add_new_concept_graph(title)
+                else:
+                    uriOldMatch = dfW[~dfW['uri_old'].isna()]['uri_old'].to_list()
+                    uriOldNotMatch = len(dfW) - len(uriOldMatch)
+                    l_PrefLabel = dfW[dfW['uri_old'].isna()]['prefLabel'].to_list()
+                    str_PrefLabel = ','.join(l_PrefLabel)
+                    
+                    print('Warning: The {} uri: ({}) {} prefLabels not match.'.format(title,uriOldNotMatch,str_PrefLabel))
+
+                    # if only match with prefLabel, generate update in the graph
+                    uriOld = pd.Series(uriOldMatch).drop_duplicates().to_list()
+                    if len(uriOld) == 1:
+                        newURI = URIRef(str(uriOld[0]))
+                        self.update_graph_concept(URIRef(title),newURI)
+        return True
     
+    def process_graph_ComplexSubject(self,dfComplexSubjectNew:pd.DataFrame,dfComplexSubjectOld:pd.DataFrame):
+
+        dfMerge = pd.merge(dfComplexSubjectNew,dfComplexSubjectOld,how='left',on=['authoritativeLabel'])
+        dfData = dfMerge.rename({'uri_x': 'uri', 'uri_y': 'uri_old'}, axis='columns')
+        dfData.to_csv(os.path.join(self.logs,'Merge_GraphNew_authoritativeLabel.csv'),sep='|',index=False)
+
+        titlesKey = pd.Series(dfData['uri'].to_list()).drop_duplicates().to_list()
+        for title in titlesKey:
+            # Filter for title
+            dfW = dfData[dfData['uri'] == title]
+            nUri = len(dfW[~dfW['uri'].isna()])
+            nOldUri = len(dfW[~dfW['uri_old'].isna()])
+
+            if nUri == nOldUri:
+                uriOld = pd.Series(dfW['uri_old'].to_list()).drop_duplicates().to_list()
+                self.update_graph_ComplexSubject(URIRef(title),URIRef(uriOld[0]))
+            else:
+                if nOldUri == 0:
+                    self.add_new_ComplexSubject_graph(title)                    
+        return True
+
     def compare_graph_get_uri(self) -> Graph:
         
         # Get Data value URI, LABELS
-        dfGraphNew_Alt,dfGraphNew_Pref,dfNew = self.get_predicate_altLabe_prefLabel(self.graphNew)
-        dfNew.sort_values(by=["uri"], inplace=True)
+        dfgNew = self.get_prefLabel(self.graphNew)
+        dfgNew.sort_values(by=["uri"], inplace=True)
         
-        dfGraphOld_Alt,dfGraphOld_Pref,dfOld = self.get_predicate_altLabe_prefLabel(self.graphCurrent)
+        dfgOld = self.get_prefLabel(self.graphCurrent)
+        dfgOld.sort_values(by=["uri"], inplace=True)
         
-        # Etape 1 - Matche all URI
-        self.match_uri_update(dfNew,dfOld)
+        # all URI with Concept
+        self.process_graph_concept(dfgNew,dfgOld)
         
+        # all URI with ComplexSubject
+        dfComplexSubjectNew = self.get_authoritativeLabel(self.graphNew)
+        dfComplexSubjectNew.sort_values(by=["uri"], inplace=True)
+        dfComplexSubjectOld = self.get_authoritativeLabel(self.graphCurrent)
+        dfComplexSubjectOld.sort_values(by=["uri"], inplace=True)
+
+        self.process_graph_ComplexSubject(dfComplexSubjectNew,dfComplexSubjectOld)
+
         return True
 
     def update_uri_concepts(self):

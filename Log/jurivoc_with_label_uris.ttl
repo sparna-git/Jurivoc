@@ -1,0 +1,71 @@
+@prefix dcterms: <http://purl.org/dc/terms/> .
+@prefix jurivoc: <https://fedlex.data.admin.ch/vocabulary/jurivoc/> .
+@prefix madsrdf: <http://www.loc.gov/mads/rdf/v1#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+
+jurivoc:JEU_D_ARGENT a skos:Concept ;
+    dcterms:identifier "JEU_D_ARGENT" ;
+    skos:broader jurivoc:JEU ;
+    skos:inScheme <https://fedlex.data.admin.ch/vocabulary/jurivoc> ;
+    skos:prefLabel "GELDSPIEL"@de,
+        "JEU D'ARGENT"@fr,
+        "GIOCO IN DENARO"@it ;
+    skos:scopeNote "Tradcution de JEU D'ARGENT"@de,
+        "Traduction de JEU D'ARGENT"@it .
+
+jurivoc:NOUVEAU a skos:Concept ;
+    dcterms:identifier "NOUVEAU" ;
+    skos:inScheme <https://fedlex.data.admin.ch/vocabulary/jurivoc> ;
+    skos:prefLabel "NEUE"@de,
+        "NOUVEAU"@fr,
+        "NUOVO"@it ;
+    skos:topConceptOf <https://fedlex.data.admin.ch/vocabulary/jurivoc> .
+
+jurivoc:ARME_FACTICE_1 a skos:Concept ;
+    dcterms:identifier "ARME_FACTICE_1" ;
+    skos:broader jurivoc:JEU ;
+    skos:inScheme <https://fedlex.data.admin.ch/vocabulary/jurivoc> ;
+    skos:prefLabel "SCHEINWAFFE"@de,
+        "ARME FACTICE 1"@fr,
+        "ARMA FINTA 1"@it ;
+    skos:related jurivoc:JEU ;
+    skos:scopeNote "Traduction de ARME FACTICE"@de .
+
+jurivoc:CONSOLE_DE_JEU a madsrdf:ComplexSubject ;
+    madsrdf:authoritativeLabel "console de jeu"@fr ;
+    madsrdf:componentList ( jurivoc:JEU jurivoc:PUBLICATION_ELECTRONIQUE ) .
+
+jurivoc:PUBLICATION_ELECTRONIQUE a skos:Concept ;
+    dcterms:identifier "PUBLICATION_ELECTRONIQUE" ;
+    rdfs:seeAlso jurivoc:CONSOLE_DE_JEU ;
+    skos:inScheme <https://fedlex.data.admin.ch/vocabulary/jurivoc> ;
+    skos:prefLabel "TEST"@de,
+        "PUBLICATION ÉLECTRONIQUE"@fr,
+        "TEST"@it ;
+    skos:topConceptOf <https://fedlex.data.admin.ch/vocabulary/jurivoc> .
+
+jurivoc:JEU a skos:Concept ;
+    dcterms:identifier "JEU" ;
+    rdfs:seeAlso jurivoc:CONSOLE_DE_JEU ;
+    skos:altLabel "spielzeug"@de,
+        "jouet"@fr,
+        "giocattolo"@it ;
+    skos:inScheme <https://fedlex.data.admin.ch/vocabulary/jurivoc> ;
+    skos:narrower jurivoc:ARME_FACTICE_1,
+        jurivoc:JEU_D_ARGENT ;
+    skos:prefLabel "SPIEL"@de,
+        "JEU"@fr,
+        "GIOCO"@it ;
+    skos:related jurivoc:ARME_FACTICE_1 ;
+    skos:topConceptOf <https://fedlex.data.admin.ch/vocabulary/jurivoc> .
+
+<https://fedlex.data.admin.ch/vocabulary/jurivoc> a skos:ConceptScheme ;
+    owl:versionInfo "v. 19.01.2024" ;
+    skos:hasTopConcept jurivoc:JEU,
+        jurivoc:NOUVEAU,
+        jurivoc:PUBLICATION_ELECTRONIQUE ;
+    skos:prefLabel "THÉSAURUS"@fr .
+
