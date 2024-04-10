@@ -1,6 +1,5 @@
 import os
 import pandas as pd
-import numpy as np
 from rdflib import Graph, URIRef, Namespace, Literal
 from rdflib.collection import Collection
 from rdflib.term import BNode
@@ -20,7 +19,7 @@ ns_madsrdf = Namespace("http://www.loc.gov/mads/rdf/v1#")
 def dataquality_text(title:str):
 
     data_input = title.upper()
-    replace_dict = {"(":"_",")":"_","[":"_","]": "_","'":"_","\"":"_"," ":"_","-":"_","Ï":"_","¿":"_","½":"_","É":"E","È":"E","Ê":"E","À":"A","Â":"A","Ô":"O",".":"_",",":"_","Û":"U","Î":"I","Ç":"C","/":"_","&":"_"}
+    replace_dict = {"(":"_",")":"_","[":"_","]": "_","'":"_","\"":"_"," ":"_","Ï":"_","¿":"_","½":"_","É":"E","È":"E","Ê":"E","À":"A","Â":"A","Ô":"O",".":"_",",":"_","Û":"U","Î":"I","Ç":"C","/":"_","&":"_"}
 
     #1. supprimer tous les caractères spéciaux, parenthèses, crochets, apostrophes, etc. : 
     #   les remplacer par “_”, garder seulement les lettres et les digits
@@ -142,13 +141,30 @@ class update_graph:
         dfProcess = dfComplex.groupby(['uri'])['componentList'].apply('_'.join).reset_index()
         dfProcess.sort_values(by='uri',inplace=True)
         dfProcess.reset_index(drop=True, inplace=True)
-        
-        dfProcess['IDseq'] = [str(idx+1) for idx,row in dfProcess.iterrows()]
-        
+
+        CLS = pd.Series(dfProcess['componentList'].to_list()).drop_duplicates().to_list()
+        l = []
+        for cl in CLS:
+            dfF = dfProcess[dfProcess['componentList'] == cl]
+            if len(dfF) == 1:
+                l.append(dfF)
+            else:
+                dfF.sort_values(by='uri',inplace=True)
+                tmp = []
+                nSeq = 1
+                for idx,row in dfF.iterrows():
+                    uri = row['uri']
+                    idseq = str(nSeq)+'_'+row['componentList']
+                    nSeq += 1
+                    tmp.append([uri,idseq])
+                dfSe = pd.DataFrame(data=tmp,columns=['uri','componentList'])
+                l.append(dfSe)
+        dfGenerator = pd.concat(l)
+
         # Update URI
-        for idx,row in dfProcess.iterrows():
-            subject = row['uri']
-            newIdSeq = row['IDseq']+'_'+row['componentList']
+        for idx,row in dfGenerator.iterrows():
+            subject = URIRef(row['uri'])
+            newIdSeq = row['componentList']
             newURI  = URIRef(ns_jurivoc+newIdSeq)
             
             for s,p,o in self.graphNew.triples((subject,None,None)):                            
@@ -239,6 +255,7 @@ class update_graph:
         self.graphNew.remove((None,None,subject))
 
         self.IdSeq.append(nMAxSequence)
+        print('{} uri did not match any prefLabel. It is considered like a new Concept with ID {}'.format(subject,str(nMAxSequence)))
 
         return True
 
