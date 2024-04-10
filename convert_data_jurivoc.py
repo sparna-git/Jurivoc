@@ -3,6 +3,8 @@ from JurivocData import dataset
 from convert_data_graph import convert_graph, update_graph
 import argparse
 import pathlib
+import pandas as pd
+from rdflib import Graph
 
 if __name__ == '__main__':
 	
@@ -23,16 +25,16 @@ if __name__ == '__main__':
     print("Directory Source: {}".format(args.data))
     print("Directory output: {}".format(args.output))
 
-    isLogDirectory = os.path.exists(args.output)
-    if not isLogDirectory:
+    bOutput = os.path.exists(args.output)
+    if bOutput == False:
       os .makedirs(args.output)
       print("The {} directory is created.".format(args.output))
 
-    isLogsDirectory = os.path.exists(args.logs)
-    if not isLogsDirectory:
+    bLogs = os.path.exists(args.logs)
+    if bLogs == False:
       os .makedirs(args.logs)
       print("The {} directory is created.".format(args.logs))
-
+    
     print("Step 1. Parsing input files...")
     # #############################################################
     #
@@ -48,8 +50,8 @@ if __name__ == '__main__':
     
     # create Log folder
     print("Step 1.1 Generate log output files of dataframes...")
+    
     for l in ds:
-        #print(l)
         file = os.path.join(args.logs,l[0]+'.csv')
         df = l[1]
         df.to_csv(file,sep="|",index=False)
@@ -61,7 +63,8 @@ if __name__ == '__main__':
     # Output: save a graph file
     #
     ###########################################################
-    print("Step 2. Generate Jurivoc SKOS graph...")
+    
+    print("Step 2. Generate Jurivoc SKOS graph...")    
     #Instance
     g = convert_graph(ds,args.logs)
     # Call process
@@ -76,7 +79,7 @@ if __name__ == '__main__':
         s = args.previousVersion
     else:
         s = ''
-    updateURIs_Concepts = update_graph(gOutput,s)
+    updateURIs_Concepts = update_graph(gOutput,s,args.logs)
     gOutputResult = updateURIs_Concepts.update_uri_concepts()
     if len(gOutputResult) > 0:
         result = os.path.join(args.output,'jurivoc.ttl')
