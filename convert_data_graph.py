@@ -6,7 +6,10 @@ from rdflib.term import BNode
 #https://rdflib.readthedocs.io/en/stable/_modules/rdflib/paths.html
 from rdflib.paths import Path, evalPath
 from rdflib.term import BNode
-#from nltk.corpus import wordnet as wn
+
+
+# Save data log
+wlog_block = []
 
 # Declaration Global NAMESPACE
 ns_jurivoc = Namespace("https://fedlex.data.admin.ch/vocabulary/jurivoc/")
@@ -97,7 +100,7 @@ class update_graph:
         dfURIS.sort_values(by=["title"], inplace=True)
         dfURIS.reset_index(drop=True, inplace=True)
         dfURIS["newURI"] = [str(idx+1) for idx,row in dfURIS.iterrows()]
-        #dfURIS.to_csv("newUris.csv",sep="|",index=False)
+        
         # Update URIS
         for index, row in dfURIS.iterrows():
             subject_uri = row["uri"]
@@ -380,7 +383,7 @@ class convert_graph:
         
         self.dataset = dataset
         dir_data_for_graph = os.path.join(outputDir,'data_for_graph')
-        
+
         isExiste = os.path.exists(dir_data_for_graph)
         if isExiste == False:
             os .makedirs(dir_data_for_graph)     
@@ -441,20 +444,32 @@ class convert_graph:
                         # Generate skos:broader and skos:narrower
                         if block == "BT":
                             if "THÉSAURUS" in title_block:
+                                if title_uri not in self.listOfTitleConcept:
+                                    wlog_block.append(['Concept',"THÉSAURUS",'BT',title_uri])
+
                                 gConcepts.add((title_uri,ns_skos.topConceptOf,URIRef("https://fedlex.data.admin.ch/vocabulary/jurivoc")))
                                 gConcepts.add((URIRef("https://fedlex.data.admin.ch/vocabulary/jurivoc"),ns_skos.hasTopConcept,title_uri))
                             else:
                                 if title_block not in titleWithUSE:
-                                    gConcepts.add((title_uri,ns_skos.broader,URIRef(ns_jurivoc + dataquality_text(title_block))))
+
+                                    uri_block = URIRef(ns_jurivoc + dataquality_text(title_block))
+                                    if title_block not in self.listOfTitleConcept:
+                                        wlog_block.append(['Concept',title_uri,'BT',uri_block])
+
+                                    gConcepts.add((title_uri,ns_skos.broader,uri_block))
                                     # Inverse to skos:broader
-                                    gConcepts.add((URIRef(ns_jurivoc + dataquality_text(title_block)),ns_skos.narrower,title_uri))
+                                    gConcepts.add((uri_block,ns_skos.narrower,title_uri))
 
                         # Generate skos:scopeNote
                         if block == "SN":
                             gConcepts.add((title_uri,ns_skos.scopeNote,Literal(title_block, lang="fr") ))
 
                         if block == "SA":
-                            if title_block not in titleWithUSE:
+                            if title_block not in titleWithUSE:                                
+                                # find the title in Concept
+                                uri_block = URIRef(ns_jurivoc + dataquality_text(title_block))
+                                if title_block not in self.listOfTitleConcept:
+                                    wlog_block.append(['Concept',title_uri,'SA',uri_block])
                                 gConcepts.add((title_uri,ns_skos.related,URIRef(ns_jurivoc + dataquality_text(title_block))))
                                 gConcepts.add((URIRef(ns_jurivoc + dataquality_text(title_block)),ns_skos.related,title_uri))
             
@@ -504,16 +519,26 @@ class convert_graph:
                 for idx, row in dfTitle.iterrows():
 
                     if row["block"] == "USA":
+                        
                         titleBlock = dataquality_text(row["title_block"])
                         uriComponent = URIRef(ns_jurivoc+titleBlock)
                         datacomponentList.append(uriComponent)
+                        
+                        if row["title_block"] not in self.listOfTitleConcept:
+                            wlog_block.append(['USA_AND',uriComponent,'USA',title_uri])
+                        
                         #
                         gSpecific.add((uriComponent,ns_rdfs.seeAlso,title_uri))
                     
                     if row["block"] == "AND":
+                        
                         titleBlock = dataquality_text(row["title_block"])
                         uriComponent = URIRef(ns_jurivoc+titleBlock)
                         datacomponentList.append(uriComponent)
+
+                        if row["title_block"] not in self.listOfTitleConcept:
+                            wlog_block.append(['USA_AND',uriComponent,'AND',title_uri])
+
                         #
                         gSpecific.add((uriComponent,ns_rdfs.seeAlso,title_uri))
 
@@ -667,4 +692,8 @@ class convert_graph:
 
                     self.generate_graph_ger_ita(dfProcess,nameFile, self.listOfTitleConcept)
         
+        if len(wlog_block) > 0:
+            dfLogblock = pd.DataFrame(data = wlog_block,columns=['process','uri','block','uri_not_link'])
+            dfLogblock.to_csv(os.path.join(self.logs,"uris_not_found_in_concept.csv"),sep='|',index=False)
+
         return self.jurivocGraph
