@@ -693,7 +693,7 @@ class convert_graph:
                     self.generate_graph_ger_ita(dfProcess,nameFile, self.listOfTitleConcept)
         
         if len(wlog_block) > 0:
-            dfLogblock = pd.DataFrame(data = wlog_block,columns=['process','uri','block','uri_not_link'])
+            dfLogblock = pd.DataFrame(data = wlog_block,columns=['process','uri_not_found','block','uri'])
             dfLogblock.to_csv(os.path.join(self.logs,"uris_not_found_in_concept.csv"),sep='|',index=False)
 
         return self.jurivocGraph
