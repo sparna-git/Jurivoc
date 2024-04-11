@@ -3,7 +3,8 @@ import pandas as pd
 from rdflib import Graph, URIRef, Namespace, Literal
 from rdflib.collection import Collection
 from rdflib.term import BNode
-from rdflib.paths import Path, eval_path
+#https://rdflib.readthedocs.io/en/stable/_modules/rdflib/paths.html
+from rdflib.paths import Path, evalPath
 from rdflib.term import BNode
 #from nltk.corpus import wordnet as wn
 
@@ -127,7 +128,7 @@ class update_graph:
             for ss,pp,oo in self.graphNew.triples((s,ns_madsrdf.componentList,None)):
                 # Get values data in a Blank Node
                 l = list(
-                    eval_path(
+                    evalPath(
                         self.graphNew,
                         (oo,
                          ns_rdf.rest / ns_rdf.first,
@@ -192,7 +193,7 @@ class update_graph:
         list_PrefLabel = []
         for s,p,o in gProcess.triples((None,None,ns_skos.Concept)):            
             
-            listOfPrefLabel = list(eval_path(gProcess,
+            listOfPrefLabel = list(evalPath(gProcess,
                                     (s,ns_skos.prefLabel,None)
                                     ))
             [list_PrefLabel.append([pl[0],pl[1]+self.get_lang(pl)]) for pl in listOfPrefLabel]
@@ -205,7 +206,7 @@ class update_graph:
         list_Label = []
         for s,p,o in gProcess.triples((None,None,ns_madsrdf.ComplexSubject)):            
             
-            list_ALabel = list(eval_path(gProcess,
+            list_ALabel = list(evalPath(gProcess,
                                     (s,ns_madsrdf.authoritativeLabel,None)
                                     ))
             [list_Label.append([pl[0],pl[1]+self.get_lang(pl)]) for pl in list_ALabel]
