@@ -70,8 +70,8 @@ if __name__ == '__main__':
     # Call process
     gOutput = g.graph_process()
     if len(gOutput) > 0:
-        gIntermediare = os.path.join(args.logs,'jurivoc_with_label_uris.ttl')
-        gOutput.serialize(format="ttl", destination= gIntermediare)
+        gIntermediare = os.path.join(args.logs,'jurivoc_with_label_uris.n3')
+        gOutput.serialize(format="n3", destination= gIntermediare)
     
     # Call update graph class
     s = ''
@@ -82,5 +82,5 @@ if __name__ == '__main__':
     updateURIs_Concepts = update_graph(gOutput,s,args.logs)
     gOutputResult = updateURIs_Concepts.update_uri_concepts()
     if len(gOutputResult) > 0:
-        result = os.path.join(args.output,'jurivoc.ttl')
-        gOutputResult.serialize(format="ttl", destination= result)
+        result = os.path.join(args.output,'jurivoc.n3')
+        gOutputResult.serialize(format="n3", destination= result)

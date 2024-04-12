@@ -73,14 +73,20 @@ class update_graph:
 
         self.directory = pathGraph     
         if os.path.exists(pathGraph):
+            tmpGraph = Graph()
             if os.path.isfile(pathGraph):
-                self.graphCurrent.parse(pathGraph)
+                with open(pathGraph, "r") as f:
+                    tmpGraph.parse(pathGraph,publicID ='https://fedlex.data.admin.ch/vocabulary/jurivoc/',format="n3")
             else:
                 if os.path.isdir(pathGraph):
                     for f in os.listdir(pathGraph):
                         fileInput = os.path.join(pathGraph, f)
                         if os.path.isfile(fileInput):
-                            self.graphCurrent.parse(fileInput)
+                            with open(fileInput,'r') as f:
+                                tmpGraph.parse(f,publicID ='https://fedlex.data.admin.ch/vocabulary/jurivoc/' ,format="n3")
+            gSerializeN3 = tmpGraph.serialize(format="n3").decode('utf-8')
+            self.graphCurrent.parse(data=gSerializeN3,format="n3")
+            
             # Get Id Concept
             nSeq = []
             [nSeq.append(s.split('/')[-1]) for s,p,o in self.graphCurrent.triples((None,None,ns_skos.Concept))]
