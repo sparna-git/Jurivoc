@@ -61,9 +61,8 @@ class dataset:
                     dfUpdateSA = self.update_title_block_joint(dfUpdateAND,'SA')
                     dfOutput = self.update_sn_block(dfUpdateSA)
 
-                    #dfOutput.to_csv('Temp1.csv',sep="|",index=False)
                     dataset.append([filename,dfOutput])
-
+                    
         # Preprocessing for language DF
         if len(source_language) > 0:            
             dataset.append(["dbLanguage",pd.concat(source_language)])
@@ -258,11 +257,45 @@ class dataset:
         dfTmp = pd.DataFrame(data = datalist, columns=["level","title","block","title_block"])
         return dfTmp
 
+    def preprocessing_titles(self,df:pd.DataFrame) -> pd.DataFrame:
+
+        # Evaluate and update dataframe
+        indexMax = pd.Series(df['level'].squeeze()).index.max()
+        data = []
+        auxtitle = ''
+        auxtitle_full = ''
+        level_nextValue = 0
+        for idx,row in df.iterrows():
+            nlevel = int(row['level'])
+
+            if nlevel == 1:
+                data.append([row['level'],row['title']])
+            elif nlevel == 3:
+
+                # Update title header
+                if idx < indexMax:
+                    nextIdx = idx+1
+                    level_nextValue = int(df.at[idx+1,"level"])
+
+                if level_nextValue == 8:
+                    # Update title
+                    title = row['title'] + ' ' + df.at[nextIdx,'title']
+                    #data_duplicate.append([df.at[idx+1,"title"],title])
+                    data.append([row['level'],title])                    
+                else:
+                    data.append([row['level'],row['title']])
+        
+        dfProcess = pd.DataFrame(data=data,columns=['level','title'])        
+        return dfProcess
+
     def language_processing(self, df:pd.DataFrame, nameFile: str) -> pd.DataFrame:
 
         dftitles = self.update_titles(df)
-        
-        df_block = self.add_block_column(dftitles)
+        # this function of preprocessing, fixes the problems when the phrase is jump in new line 
+        dfTitles_preprocessing = self.preprocessing_titles(dftitles)
+
+        df_block = self.add_block_column(dfTitles_preprocessing)
+
         df_title = self.add_title_block(df_block)
 
         dfUpdateBT = self.update_title_block_joint(df_title,'BT')
