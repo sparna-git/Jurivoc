@@ -3,8 +3,15 @@
    USA  GIOCO
    AND  PUBBLICAZIONE ELETTRONICA
 
- CONVENZIONE BILATERALE(RICONOSCIMENTO E ESECUZIONE DELLE SENTENZE)
+ CONVENZIONE DELL'AIA(ESAZIONE INTERNAZIONALE DI PRESTAZIONI
+ ALIMENTARI)
+   UF   convenzione dell'aia
    BT   THESAURUS
+   SN   convenzione del 23 novembre 2007 sull'esazione internazionale
+        di prestazioni alimentari nei confronti di figli e altri
+        membri della famiglia; utilizzato anche per l'indicizzazione
+        della giurisprudenza da settembre 2018; prima di questa data,
+        riservato unicamente all'indicizzazione della dottrina
 
  ARMA FINTA
    BT   GIOCO
@@ -28,6 +35,6 @@
 
  THESAURUS
    NT   GIOCO
-        CONVENZIONE BILATERALE(RICONOSCIMENTO E ESECUZIONE DELLE
-        SENTENZE)
+        CONVENZIONE DELL'AIA(ESAZIONE INTERNAZIONALE DI PRESTAZIONI
+        ALIMENTARI)
    SN   v. 19.01.2024
