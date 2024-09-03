@@ -1,5 +1,6 @@
 import os
 import pandas as pd
+import re
 
 blockS_ID = ["UF","BT","SN","SA","USE","UFA","NT","USA","AND"]
 LANGUAGE_DICT = {"ITA":"it","GER":"de"}
@@ -61,12 +62,26 @@ class dataset:
                     dfUpdateSA = self.update_title_block_joint(dfUpdateAND,'SA')
                     dfOutput = self.update_sn_block(dfUpdateSA)
 
+
+                    # if title is a number then convert title in 'c_'+title
+                    dfOutput['title'] = dfOutput['title'].apply(self.update_title_dataframe)
+
                     dataset.append([filename,dfOutput])
                     
         # Preprocessing for language DF
         if len(source_language) > 0:            
             dataset.append(["dbLanguage",pd.concat(source_language)])
         return dataset
+    
+    def update_title_dataframe(self,title:str) -> str:
+        stitle = ''
+        if re.match('^[0-9]+$',title):
+            stitle = 'c_'+title
+        else:
+            stitle = title
+
+        return stitle
+
 
     def update_titles(self, df:pd.DataFrame) -> pd.DataFrame:
 
@@ -83,21 +98,21 @@ class dataset:
             # Update title header
             if idx < indexMax:
                 nextIdx = idx+1
-                level_nextValue = df.at[idx+1,"level"]            
+                level_nextValue = df.at[idx+1,"level"]    
                 
             if int(row['level']) == 1:
                 if row['level'] == level_nextValue:
                     # Update title
                     title = row['title'] + ' ' + df.at[nextIdx,'title']
-                    #data_duplicate.append([df.at[idx+1,"title"],title])
                     data.append([row['level'],title])
                     auxtitle = df.at[nextIdx,'title']
                     auxtitle_full = title                    
                 else:
                     if row['title'] != auxtitle:
                         data.append([row['level'],row['title']])
-                #    else:
-                #        data.append([row['level'],auxtitle_full])
+                        auxtitle = ''
+                    #else:
+                    #    data.append([row['level'],auxtitle_full])
             else:
                     if row['title'] != auxtitle:
                         data.append([row['level'],row['title']])
@@ -280,7 +295,6 @@ class dataset:
                 if level_nextValue == 8:
                     # Update title
                     title = row['title'] + ' ' + df.at[nextIdx,'title']
-                    #data_duplicate.append([df.at[idx+1,"title"],title])
                     data.append([row['level'],title])                    
                 else:
                     data.append([row['level'],row['title']])
@@ -291,8 +305,10 @@ class dataset:
     def language_processing(self, df:pd.DataFrame, nameFile: str) -> pd.DataFrame:
 
         dftitles = self.update_titles(df)
+        #dftitles.to_csv(nameFile+'_titles.csv',index=False)
         # this function of preprocessing, fixes the problems when the phrase is jump in new line 
         dfTitles_preprocessing = self.preprocessing_titles(dftitles)
+        #dfTitles_preprocessing.to_csv(nameFile+'_preprocessing_titles.csv',index=False)
 
         df_block = self.add_block_column(dfTitles_preprocessing)
 
@@ -309,7 +325,7 @@ class dataset:
         dfTmp2 = dftmp.reset_index(drop=True)
         dfOutputLanguage = dfTmp2.drop(['level'], axis=1)
         dfOutput = dfOutputLanguage.rename(columns={"block":"language","title_block":"title_traduction"})
-        
+
         dfOutput['language'] = dfOutput['language'].apply([lambda l : LANGUAGE_DICT[l]])
 
         return dfOutput
