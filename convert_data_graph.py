@@ -55,6 +55,16 @@ def normalize_text_url(split_title : list,ind : int):
         normalize_text_url(split_title,ind)
     return split_title
 
+def remove_c_title(title:str):
+
+    import re
+    if re.match('^(C_)([0-9]+)$',title):
+        stitle = title.replace('C_','')
+    else:
+        stitle = title
+
+    return stitle
+
 
 class update_graph:
 
@@ -107,6 +117,10 @@ class update_graph:
         dfURIS.reset_index(drop=True, inplace=True)
         dfURIS["newURI"] = [str(idx+1) for idx,row in dfURIS.iterrows()]
         
+        # Save in log
+        #dfURIS.to_csv(self.logs+"/uris_with_new_id.csv",index=False)
+
+
         # Update URIS
         for index, row in dfURIS.iterrows():
             subject_uri = row["uri"]
@@ -435,8 +449,10 @@ class convert_graph:
                 # Create skos:Concept Graph
                 gConcepts.add((title_uri,ns_rdf.type,ns_skos.Concept))
                 gConcepts.add((title_uri,ns_skos.inScheme,URIRef('https://fedlex.data.admin.ch/vocabulary/jurivoc')))
-                gConcepts.add((title_uri,ns_skos.prefLabel,Literal(Title, lang="fr")))
-                gConcepts.add((title_uri,ns_dct.identifier,Literal(title_dq)))
+                
+                gConcepts.add((title_uri,ns_skos.prefLabel,Literal(remove_c_title(Title), lang="fr")))
+                
+                gConcepts.add((title_uri,ns_dct.identifier,Literal(remove_c_title(title_dq))))
                 
                 for index, row in dfFilter.iterrows(): 
                     block = row["block"]
@@ -574,7 +590,7 @@ class convert_graph:
 
             if title_language != "THESAURUS":
                 if title in conceptKP:
-                    gLanguage.add((title_uri,ns_skos.prefLabel,Literal(title_language, lang=idLang)))
+                    gLanguage.add((title_uri,ns_skos.prefLabel,Literal(remove_c_title(title_language), lang=idLang)))
                 else:
                     terms.append(title)
         dfNotIdentifier = df[df['title'].isin(terms)]
@@ -627,7 +643,7 @@ class convert_graph:
                 if (Title == "THESAURUS") or (Title == "THÉSAURUS"):
                     gLanguage.add((URIRef("https://fedlex.data.admin.ch/vocabulary/jurivoc"),ns_skos.prefLabel,Literal(str(title_lang), lang=idLang)))                    
                 else:
-                    gLanguage.add((title_uri,ns_skos.prefLabel,Literal(str(title_lang), lang=idLang)))
+                    gLanguage.add((title_uri,ns_skos.prefLabel,Literal(remove_c_title(str(title_lang)), lang=idLang)))
                     for idx, row in dfFilter.iterrows():
                         if row["block"] == "UF":
                             titleBlock = row["title_block"]

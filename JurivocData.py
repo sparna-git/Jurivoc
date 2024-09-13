@@ -76,7 +76,7 @@ class dataset:
     def update_title_dataframe(self,title:str) -> str:
         stitle = ''
         if re.match('^[0-9]+$',title):
-            stitle = 'c_'+title
+            stitle = 'C_'+title
         else:
             stitle = title
 
@@ -327,6 +327,9 @@ class dataset:
         dfOutput = dfOutputLanguage.rename(columns={"block":"language","title_block":"title_traduction"})
 
         dfOutput['language'] = dfOutput['language'].apply([lambda l : LANGUAGE_DICT[l]])
+
+        # if title is a number then convert title in 'c_'+title
+        dfOutput['title'] = dfOutput['title'].apply(self.update_title_dataframe)
 
         return dfOutput
 
