@@ -452,7 +452,7 @@ class convert_graph:
                 
                 gConcepts.add((title_uri,ns_skos.prefLabel,Literal(remove_c_title(Title), lang="fr")))
                 
-                gConcepts.add((title_uri,ns_dct.identifier,Literal(remove_c_title(title_dq))))
+                gConcepts.add((title_uri,ns_dct.identifier,Literal(title_dq)))
                 
                 for index, row in dfFilter.iterrows(): 
                     block = row["block"]
