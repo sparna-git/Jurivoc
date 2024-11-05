@@ -17,10 +17,14 @@ if __name__ == '__main__':
     parser.add_argument('--d','--data',help='Path to a input file', required=True,type=pathlib.Path,dest='data')
     parser.add_argument('--o','--output',help='output Graph file directory', required=True,dest='output')
     parser.add_argument('--l','--log',help='Generate output file for each input file',dest='logs')
+    parser.add_argument('--n','--noComplexSubjects',help="Generate ComplexSubject",action=argparse.BooleanOptionalAction)
     parser.add_argument('--g','--previousVersion',help='Path to a Graph file ',type=pathlib.Path,dest='previousVersion')
+    
+
 
 	# Parse args
     args = parser.parse_args()
+    print(args)
 
     print("Directory Source: {}".format(args.data))
     print("Directory output: {}".format(args.output))
@@ -66,7 +70,7 @@ if __name__ == '__main__':
     
     print("Step 2. Generate Jurivoc SKOS graph...")    
     #Instance
-    g = convert_graph(ds,args.logs)
+    g = convert_graph(ds,args.logs, args.n)
     # Call process
     gOutput = g.graph_process()
     if len(gOutput) > 0:
@@ -79,7 +83,7 @@ if __name__ == '__main__':
         s = args.previousVersion
     else:
         s = ''
-    updateURIs_Concepts = update_graph(gOutput,s,args.logs)
+    updateURIs_Concepts = update_graph(gOutput,s,args.logs,args.n)
     gOutputResult = updateURIs_Concepts.update_uri_concepts()
     if len(gOutputResult) > 0:
         result = os.path.join(args.output,'jurivoc.n3')

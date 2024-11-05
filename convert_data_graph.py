@@ -12,7 +12,7 @@ from rdflib.term import BNode
 wlog_block = []
 
 # Declaration Global NAMESPACE
-ns_jurivoc = Namespace("https://fedlex.data.admin.ch/vocabulary/jurivoc/")
+ns_jurivoc = Namespace("https://jurivoc.bger.ch/vocabulary/jurivoc/")
 ns_rdf = Namespace("http://www.w3.org/1999/02/22-rdf-syntax-ns#")
 ns_rdfs = Namespace("http://www.w3.org/2000/01/rdf-schema#")
 ns_skos = Namespace("http://www.w3.org/2004/02/skos/core#")
@@ -68,10 +68,12 @@ def remove_c_title(title:str):
 
 class update_graph:
 
-    def __init__(self, graphInput : Graph, pathGraph : str, dirlog : str) -> None:
+    def __init__(self, graphInput : Graph, pathGraph : str, dirlog : str, noComplexSubjects:bool) -> None:
         self.graphCurrent = Graph()
         self.graphNew = graphInput
         self.graphNew.bind("jurivoc",ns_jurivoc)
+
+        self.noComplexSubjects = noComplexSubjects
 
         dir_data_for_graph = os.path.join(dirlog,'data_for_graph')
         isExiste = os.path.exists(dir_data_for_graph)
@@ -86,14 +88,14 @@ class update_graph:
             tmpGraph = Graph()
             if os.path.isfile(pathGraph):
                 with open(pathGraph, "r") as f:
-                    tmpGraph.parse(pathGraph,publicID ='https://fedlex.data.admin.ch/vocabulary/jurivoc/',format="n3")
+                    tmpGraph.parse(pathGraph,publicID ='https://jurivoc.bger.ch/vocabulary/jurivoc/',format="n3")
             else:
                 if os.path.isdir(pathGraph):
                     for f in os.listdir(pathGraph):
                         fileInput = os.path.join(pathGraph, f)
                         if os.path.isfile(fileInput):
                             with open(fileInput,'r') as f:
-                                tmpGraph.parse(f,publicID ='https://fedlex.data.admin.ch/vocabulary/jurivoc/' ,format="n3")
+                                tmpGraph.parse(f,publicID ='https://jurivoc.bger.ch/vocabulary/jurivoc/' ,format="n3")
             gSerializeN3 = tmpGraph.serialize(format="n3").decode('utf-8')
             self.graphCurrent.parse(data=gSerializeN3,format="n3")
             
@@ -380,7 +382,8 @@ class update_graph:
         dfComplexSubjectOld = self.get_authoritativeLabel(self.graphCurrent)
         dfComplexSubjectOld.sort_values(by=["uri"], inplace=True)
 
-        self.process_graph_ComplexSubject(dfComplexSubjectNew,dfComplexSubjectOld)
+        if not self.noComplexSubjects:
+            self.process_graph_ComplexSubject(dfComplexSubjectNew,dfComplexSubjectOld)
 
         return True
 
@@ -393,13 +396,14 @@ class update_graph:
             print("Generate new URIs in Skos:Concept")
             # Generate URIS in the Graph Concepts
             self.generate_new_URIS()
-            self.generate_new_uri_ComplexSubject()
+            if not self.noComplexSubjects:
+                self.generate_new_uri_ComplexSubject()
         return self.graphNew
 
 
 class convert_graph:
 
-    def __init__(self, dataset : list, outputDir) -> None:
+    def __init__(self, dataset : list, outputDir, noComplexSubjects:bool) -> None:
         
         self.dataset = dataset
         dir_data_for_graph = os.path.join(outputDir,'data_for_graph')
@@ -420,6 +424,8 @@ class convert_graph:
         self.jurivocGraph.bind("owl",ns_owl)
 
         #
+        self.noComplexSubjects = noComplexSubjects
+
         for s in self.dataset:
             if '_fre' in s[0]:
                 dfFR = s[1]
@@ -448,7 +454,9 @@ class convert_graph:
                 
                 # Create skos:Concept Graph
                 gConcepts.add((title_uri,ns_rdf.type,ns_skos.Concept))
-                gConcepts.add((title_uri,ns_skos.inScheme,URIRef('https://fedlex.data.admin.ch/vocabulary/jurivoc')))
+                gConcepts.add((title_uri,ns_rdf.type,URIRef('https://jurivoc.bger.ch/model/Jurivoc')))
+
+                gConcepts.add((title_uri,ns_skos.inScheme,URIRef('https://jurivoc.bger.ch/vocabulary/jurivoc')))
                 
                 gConcepts.add((title_uri,ns_skos.prefLabel,Literal(remove_c_title(Title), lang="fr")))
                 
@@ -469,8 +477,8 @@ class convert_graph:
                                 if title_uri not in self.listOfTitleConcept:
                                     wlog_block.append(['Concept',"THÉSAURUS",'BT',title_uri])
 
-                                gConcepts.add((title_uri,ns_skos.topConceptOf,URIRef("https://fedlex.data.admin.ch/vocabulary/jurivoc")))
-                                gConcepts.add((URIRef("https://fedlex.data.admin.ch/vocabulary/jurivoc"),ns_skos.hasTopConcept,title_uri))
+                                gConcepts.add((title_uri,ns_skos.topConceptOf,URIRef("https://jurivoc.bger.ch/vocabulary/jurivoc")))
+                                gConcepts.add((URIRef("https://jurivoc.bger.ch/vocabulary/jurivoc"),ns_skos.hasTopConcept,title_uri))
                             else:
                                 if title_block not in titleWithUSE:
 
@@ -505,7 +513,7 @@ class convert_graph:
         # get block for each title
         gConceptScheme = Graph()
         # Convert title to URI        
-        title_uri = URIRef("https://fedlex.data.admin.ch/vocabulary/jurivoc")
+        title_uri = URIRef("https://jurivoc.bger.ch/vocabulary/jurivoc")
         # Create skos:Concept Graph
         gConceptScheme.add((title_uri,ns_rdf.type,ns_skos.ConceptScheme))
         gConceptScheme.add((title_uri,ns_skos.prefLabel,Literal("THÉSAURUS", lang="fr")))
@@ -641,7 +649,7 @@ class convert_graph:
                 idLang = dfFilter["language"].unique()[0]
 
                 if (Title == "THESAURUS") or (Title == "THÉSAURUS"):
-                    gLanguage.add((URIRef("https://fedlex.data.admin.ch/vocabulary/jurivoc"),ns_skos.prefLabel,Literal(str(title_lang), lang=idLang)))                    
+                    gLanguage.add((URIRef("https://jurivoc.bger.ch/vocabulary/jurivoc"),ns_skos.prefLabel,Literal(str(title_lang), lang=idLang)))                    
                 else:
                     gLanguage.add((title_uri,ns_skos.prefLabel,Literal(remove_c_title(str(title_lang)), lang=idLang)))
                     for idx, row in dfFilter.iterrows():
@@ -696,9 +704,10 @@ class convert_graph:
 
                     # =================== Graph Specific blocks
                     #logging.info("Graph specific USA and AND block")
-                    dfSpecific.to_csv(os.path.join(self.logs,"usa_and_graph.csv"),sep="|",index=False)
-                    titleUSAAND = pd.Series(dfSpecific["title"].to_list()).drop_duplicates().to_list()
-                    self.generate_madsrdf(dfSpecific,titleUSAAND)
+                    if not self.noComplexSubjects:
+                        dfSpecific.to_csv(os.path.join(self.logs,"usa_and_graph.csv"),sep="|",index=False)
+                        titleUSAAND = pd.Series(dfSpecific["title"].to_list()).drop_duplicates().to_list()
+                        self.generate_madsrdf(dfSpecific,titleUSAAND)
                     
                 if ('jurivoc_ger' in nameFile) or ('jurivoc_ita' in nameFile):
                     #logging.info("Generate - Graph of data: {}".format(nameFile))
