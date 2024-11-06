@@ -2,6 +2,7 @@ import os
 from JurivocData import dataset
 from convert_data_graph import convert_graph, update_graph
 import argparse
+from argparse import ArgumentError
 import pathlib
 import pandas as pd
 from rdflib import Graph
@@ -10,18 +11,26 @@ if __name__ == '__main__':
 	
     # Generation of arguments
     parser = argparse.ArgumentParser(
-		prog='convert_data_jurivoc',
-		description='Converts data Jurivoc in Skos',
+        prog='convert_data_jurivoc',
+        description='Converts data Jurivoc in Skos', 
+        allow_abbrev=False
+
     )
-	# Add arguments
+    #
+    # Add arguments
     parser.add_argument('-d','--data',help='Path to a input file', required=True,type=pathlib.Path,dest='data')
     parser.add_argument('-o','--output',help='output Graph file directory', required=True,dest='output')
     parser.add_argument('-l','--log',help='Generate output file for each input file',dest='logs')
     parser.add_argument('-g','--previousVersion',help='Path to a Graph file ',type=pathlib.Path,dest='previousVersion')
     parser.add_argument('-n','--noComplexSubjects',help="No Generate ComplexSubject",required=False,action='store_true',dest='noComplexSubjects')
+        
+    try:
+        # Parse args
+        args = parser.parse_args()        
+    except ArgumentError as e:
+        print(f'Error: {e.args()}')
+    
 
-    # Parse args
-    args = parser.parse_args()
     print('---------------------------------------------')
     print('|    Argument     |     Value    |')
     print('---------------------------------------------')
@@ -32,6 +41,7 @@ if __name__ == '__main__':
     print("Directory Source: {}".format(args.data))
     print("Directory output: {}".format(args.output))
 
+    
     bOutput = os.path.exists(args.output)
     if bOutput == False:
       os .makedirs(args.output)
