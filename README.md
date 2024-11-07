@@ -56,6 +56,12 @@ pip install -r requirements.txt
 
 /!\ Make sure you are in the virtualenv !
 
+You can display the help message of the commands:
+
+```sh
+  python convert_data_jurivoc.py --help
+```
+
 The command synopsis is the following:
 
 ```sh

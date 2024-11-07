@@ -18,11 +18,11 @@ if __name__ == '__main__':
     )
     #
     # Add arguments
-    parser.add_argument('-d','--data',help='Path to a input file', required=True,type=pathlib.Path,dest='data')
-    parser.add_argument('-o','--output',help='output Graph file directory', required=True,dest='output')
-    parser.add_argument('-l','--log',help='Generate output file for each input file',dest='logs')
-    parser.add_argument('-g','--previousVersion',help='Path to a Graph file ',type=pathlib.Path,dest='previousVersion')
-    parser.add_argument('-n','--noComplexSubjects',help="No Generate ComplexSubject",required=False,action='store_true',dest='noComplexSubjects')
+    parser.add_argument('-d','--data',help='Input directory containing the Jurivoc txt files', required=True,type=pathlib.Path,dest='data')
+    parser.add_argument('-o','--output',help='Output directory', required=True,dest='output')
+    parser.add_argument('-l','--log',help='Log Directory where the raw dataframes resulting from file parsing will be logged',dest='logs')
+    parser.add_argument('-g','--previousVersion',help='Directory where the previous version of jurivoc will be read to fetch the previous URIs',type=pathlib.Path,dest='previousVersion')
+    parser.add_argument('-n','--noComplexSubjects',help="Do not generate the `madsrdf:ComplexSubject` entities",required=False,action='store_true',dest='noComplexSubjects')
         
     try:
         # Parse args
